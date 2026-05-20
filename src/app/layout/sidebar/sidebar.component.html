@@ -1,0 +1,35 @@
+<div class="sidebar-wrapper">
+  <div class="sidebar-brand">
+    <span class="brand-icon">📚</span>
+    <span class="brand-name">Lesson Plan AI</span>
+  </div>
+
+  <mat-divider class="brand-divider" />
+
+  <nav class="nav-section">
+    @for (item of navItems; track item.route) {
+      <a
+        [routerLink]="item.route"
+        routerLinkActive="active-link"
+        class="nav-item"
+        [title]="item.label"
+      >
+        <mat-icon class="nav-icon">{{ item.icon }}</mat-icon>
+        <span class="nav-label">{{ item.label }}</span>
+      </a>
+    }
+  </nav>
+
+  <div class="sidebar-footer">
+    <mat-divider />
+    @if (authService.currentUser$ | async; as user) {
+      <div class="user-info">
+        <div class="user-avatar">{{ user.full_name[0]?.toUpperCase() }}</div>
+        <div class="user-details">
+          <div class="user-name">{{ user.full_name }}</div>
+          <div class="user-role">{{ user.role | titlecase }}</div>
+        </div>
+      </div>
+    }
+  </div>
+</div>

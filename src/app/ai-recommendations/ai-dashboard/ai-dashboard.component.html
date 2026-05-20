@@ -1,0 +1,183 @@
+<app-page-header title="AI Recommendations" subtitle="Powered by Mistral 7B via Ollama">
+  <mat-form-field appearance="outline" class="plan-select">
+    <mat-label>Lesson Plan</mat-label>
+    <mat-select [formControl]="selectedPlanId">
+      @for (p of plans; track p.id) {
+        <mat-option [value]="p.id">{{ p.title }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+  <button mat-icon-button (click)="refresh()" [disabled]="loading" matTooltip="Refresh">
+    <mat-icon>refresh</mat-icon>
+  </button>
+</app-page-header>
+
+@if (loading) {
+  <div class="loading-center">
+    <mat-spinner diameter="56" />
+    <p>Generating AI recommendations...</p>
+  </div>
+} @else if (!aiData) {
+  <div class="empty-state">
+    <mat-icon>auto_awesome</mat-icon>
+    <p>Select a lesson plan to view AI recommendations.</p>
+  </div>
+} @else {
+  @if (aiData.fallback_mode) {
+    <div class="fallback-banner">
+      <mat-icon>info_outline</mat-icon>
+      Running in rule-based fallback mode (Ollama offline).
+    </div>
+  }
+
+  <!-- Risk Assessment -->
+  <div class="section-grid">
+    <mat-card class="risk-card">
+      <mat-card-header>
+        <mat-card-title>Risk Assessment</mat-card-title>
+        <span class="spacer"></span>
+        <app-risk-badge [level]="aiData.risk_assessment.risk_level" />
+      </mat-card-header>
+      <mat-card-content>
+        <div class="risk-score-row">
+          <div class="risk-score">{{ aiData.risk_assessment.risk_score | number:'1.0-0' }}<span class="score-max">/100</span></div>
+          <div class="risk-meta">
+            <div>Completion: {{ aiData.risk_assessment.completion_percentage | number:'1.0-0' }}%</div>
+            <div>Delayed topics: {{ aiData.risk_assessment.delayed_topics_count }}</div>
+            <div>Hours behind: {{ aiData.risk_assessment.hours_behind }}h</div>
+          </div>
+        </div>
+        <mat-progress-bar mode="determinate" [value]="aiData.risk_assessment.risk_score" [color]="aiData.risk_assessment.risk_score > 60 ? 'warn' : 'primary'" />
+        @if (aiData.risk_assessment.risk_factors.length > 0) {
+          <div class="risk-factors">
+            <strong>Risk Factors:</strong>
+            @for (factor of aiData.risk_assessment.risk_factors; track factor) {
+              <div class="factor-item"><mat-icon>warning_amber</mat-icon> {{ factor }}</div>
+            }
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Next Topic -->
+    @if (aiData.next_topic) {
+      <mat-card class="next-topic-card">
+        <mat-card-header>
+          <mat-card-title>Next Recommended Topic</mat-card-title>
+          <span class="priority-badge" [class.high-priority]="aiData.next_topic.priority_score > 70">
+            Priority: {{ aiData.next_topic.priority_score | number:'1.0-0' }}
+          </span>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="next-topic-title">{{ aiData.next_topic.topic_title }}</div>
+          <div class="next-topic-chapter">in {{ aiData.next_topic.chapter_title }}</div>
+          <div class="next-topic-meta">
+            <span><mat-icon>schedule</mat-icon> {{ aiData.next_topic.estimated_hours }}h</span>
+            <span><mat-icon>school</mat-icon> {{ aiData.next_topic.suggested_method | titlecase }}</span>
+            @if (aiData.next_topic.is_delayed) {
+              <span class="delayed-badge"><mat-icon>warning</mat-icon> {{ aiData.next_topic.days_overdue }} days overdue</span>
+            }
+          </div>
+          <p class="next-topic-reason">{{ aiData.next_topic.reason }}</p>
+        </mat-card-content>
+      </mat-card>
+    }
+  </div>
+
+  <!-- Weak Areas -->
+  @if (aiData.weak_areas.length > 0) {
+    <mat-card class="weak-areas-card">
+      <mat-card-header>
+        <mat-card-title>Weak Areas</mat-card-title>
+        <mat-card-subtitle>Topics requiring attention</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="weak-areas-list">
+          @for (area of aiData.weak_areas; track area.topic_id) {
+            <div class="weak-area-item">
+              <div class="weak-area-info">
+                <div class="weak-title">{{ area.topic_title }}</div>
+                <div class="weak-chapter">{{ area.chapter_title }}</div>
+              </div>
+              @if (area.revision_recommended) {
+                <span class="revision-badge">Revision Recommended</span>
+              }
+              <div class="weak-approach">{{ area.suggested_approach }}</div>
+            </div>
+          }
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!-- Timetable -->
+  @if (aiData.timetable_suggestions.length > 0) {
+    <mat-card class="timetable-card">
+      <mat-card-header>
+        <mat-card-title>Suggested Timetable</mat-card-title>
+        <mat-card-subtitle>Next 4 weeks</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <table mat-table [dataSource]="aiData.timetable_suggestions" class="timetable-table">
+          <ng-container matColumnDef="slot">
+            <th mat-header-cell *matHeaderCellDef>#</th>
+            <td mat-cell *matCellDef="let row">{{ row.slot }}</td>
+          </ng-container>
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef>Date</th>
+            <td mat-cell *matCellDef="let row">{{ row.date | date:'dd MMM' }} ({{ row.day_of_week }})</td>
+          </ng-container>
+          <ng-container matColumnDef="topic_title">
+            <th mat-header-cell *matHeaderCellDef>Topic</th>
+            <td mat-cell *matCellDef="let row">{{ row.topic_title }}</td>
+          </ng-container>
+          <ng-container matColumnDef="chapter_title">
+            <th mat-header-cell *matHeaderCellDef>Chapter</th>
+            <td mat-cell *matCellDef="let row">{{ row.chapter_title }}</td>
+          </ng-container>
+          <ng-container matColumnDef="teaching_method">
+            <th mat-header-cell *matHeaderCellDef>Method</th>
+            <td mat-cell *matCellDef="let row">{{ row.teaching_method | titlecase }}</td>
+          </ng-container>
+          <ng-container matColumnDef="hours">
+            <th mat-header-cell *matHeaderCellDef>Hours</th>
+            <td mat-cell *matCellDef="let row">{{ row.suggested_hours }}h</td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="timetableCols"></tr>
+          <tr mat-row *matRowDef="let row; columns: timetableCols;"></tr>
+        </table>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!-- Method Effectiveness Chart -->
+  @if (aiData.method_effectiveness.length > 0) {
+    <mat-card class="chart-card">
+      <mat-card-content>
+        <apx-chart
+          [series]="methodChartOptions.series"
+          [chart]="methodChartOptions.chart"
+          [xaxis]="methodChartOptions.xaxis"
+          [dataLabels]="methodChartOptions.dataLabels"
+          [plotOptions]="methodChartOptions.plotOptions"
+          [title]="methodChartOptions.title"
+        />
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!-- AI Summary -->
+  @if (aiData.ai_summary) {
+    <mat-card class="ai-summary-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon class="ai-icon">auto_awesome</mat-icon>
+          AI Summary
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <p class="summary-text">{{ aiData.ai_summary }}</p>
+      </mat-card-content>
+    </mat-card>
+  }
+}

@@ -1,0 +1,74 @@
+<app-page-header title="Dashboard" subtitle="Academic Lesson Plan Overview" />
+
+<div class="stats-grid">
+  <app-stat-card
+    title="Total Subjects"
+    [value]="totalSubjects"
+    icon="menu_book"
+    color="#4f46e5"
+  />
+  <app-stat-card
+    title="Lesson Plans"
+    [value]="totalPlans"
+    icon="assignment"
+    color="#0891b2"
+  />
+  <app-stat-card
+    title="AI Status"
+    [value]="aiHealthy ? 'Active' : 'Offline'"
+    icon="auto_awesome"
+    [color]="aiHealthy ? '#16a34a' : '#dc2626'"
+    subtitle="Ollama / Mistral"
+  />
+  <app-stat-card
+    title="Recommendations"
+    value="Ready"
+    icon="lightbulb"
+    color="#d97706"
+    subtitle="Click AI tab to view"
+  />
+</div>
+
+<div class="charts-row">
+  <mat-card class="chart-card">
+    <mat-card-content>
+      <apx-chart
+        [series]="chartOptions.series"
+        [chart]="chartOptions.chart"
+        [labels]="chartOptions.labels"
+        [dataLabels]="chartOptions.dataLabels"
+        [legend]="chartOptions.legend"
+        [title]="chartOptions.title"
+      />
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="recent-plans-card">
+    <mat-card-header>
+      <mat-card-title>Recent Lesson Plans</mat-card-title>
+      <span class="spacer"></span>
+      <a mat-button routerLink="/lesson-plans" color="primary">View All</a>
+    </mat-card-header>
+    <mat-card-content>
+      @if (recentPlans.length === 0) {
+        <div class="empty-state">
+          <mat-icon>assignment_outlined</mat-icon>
+          <p>No lesson plans yet.</p>
+          <a mat-stroked-button routerLink="/lesson-plans" color="primary">Create First Plan</a>
+        </div>
+      } @else {
+        <div class="plans-list">
+          @for (plan of recentPlans; track plan.id) {
+            <a [routerLink]="['/lesson-plans', plan.id]" class="plan-item">
+              <div class="plan-info">
+                <div class="plan-title">{{ plan.title }}</div>
+                <div class="plan-meta">{{ plan.academic_year }} · Sem {{ plan.semester }}</div>
+              </div>
+              <span class="plan-status status-{{ plan.status }}">{{ plan.status | titlecase }}</span>
+            </a>
+          }
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>
