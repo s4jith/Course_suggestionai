@@ -54,6 +54,10 @@ export const routes: Routes = [
         path: 'ai',
         loadComponent: () => import('./ai-recommendations/ai-dashboard/ai-dashboard.component').then(m => m.AiDashboardComponent),
       },
+      {
+        path: 'analytics',
+        loadComponent: () => import('./analytics/analytics-dashboard/analytics-dashboard.component').then(m => m.AnalyticsDashboardComponent),
+      },
     ],
   },
 
