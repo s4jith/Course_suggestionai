@@ -1,4 +1,38 @@
-<app-page-header title="AI Recommendations" subtitle="Powered by Mistral 7B via Ollama">
+﻿<!-- =========================================================================
+  AI Status Bar
+========================================================================== -->
+<div class="ai-status-bar">
+  <div class="status-pill" [class]="healthStatusClass">
+    <mat-icon>{{ healthStatusIcon }}</mat-icon>
+    <span class="status-label">{{ healthStatusLabel }}</span>
+    @if (aiHealth?.model_loaded) {
+      <span class="model-tag">{{ aiHealth!.model }}</span>
+    }
+  </div>
+  <div class="status-bar-actions">
+    <mat-slide-toggle
+      [(ngModel)]="useAI"
+      (change)="toggleAI()"
+      [disabled]="loading()"
+      color="primary"
+      class="ai-toggle">
+      Use AI Engine
+    </mat-slide-toggle>
+    @if (lastGenerated) {
+      <span class="last-gen">
+        <mat-icon>update</mat-icon>
+        Updated {{ lastGenerated | date:'HH:mm:ss' }}
+      </span>
+    }
+  </div>
+</div>
+
+<!-- =========================================================================
+  Page Header + Plan Selector
+========================================================================== -->
+<app-page-header
+  title="AI Recommendations"
+  subtitle="Powered by Mistral 7B via Ollama — intelligent teaching insights">
   <mat-form-field appearance="outline" class="plan-select">
     <mat-label>Lesson Plan</mat-label>
     <mat-select [formControl]="selectedPlanId">
@@ -6,178 +40,555 @@
         <mat-option [value]="p.id">{{ p.title }}</mat-option>
       }
     </mat-select>
+    <mat-icon matPrefix>menu_book</mat-icon>
   </mat-form-field>
-  <button mat-icon-button (click)="refresh()" [disabled]="loading" matTooltip="Refresh">
+  <button mat-flat-button color="primary" (click)="refresh()" [disabled]="loading()" class="refresh-btn">
     <mat-icon>refresh</mat-icon>
+    <span>{{ loading() ? 'Generating...' : 'Refresh' }}</span>
   </button>
 </app-page-header>
 
-@if (loading) {
-  <div class="loading-center">
-    <mat-spinner diameter="56" />
-    <p>Generating AI recommendations...</p>
+<!-- =========================================================================
+  Loading skeleton animation
+========================================================================== -->
+@if (loading()) {
+  <div class="skeleton-wrap">
+    <div class="skeleton-row">
+      <div class="skeleton-card tall"><div class="skeleton-pulse"></div></div>
+      <div class="skeleton-card tall"><div class="skeleton-pulse"></div></div>
+    </div>
+    <div class="skeleton-card wide"><div class="skeleton-pulse"></div></div>
+    <div class="skeleton-row">
+      <div class="skeleton-card"><div class="skeleton-pulse"></div></div>
+      <div class="skeleton-card"><div class="skeleton-pulse"></div></div>
+      <div class="skeleton-card"><div class="skeleton-pulse"></div></div>
+    </div>
+    <div class="skeleton-card wide xl"><div class="skeleton-pulse"></div></div>
+    <p class="loading-hint">
+      <mat-icon>auto_awesome</mat-icon>
+      Analysing lesson plan data with Mistral 7B...
+    </p>
   </div>
-} @else if (!aiData) {
+}
+
+<!-- Empty state -->
+@if (!loading() && !aiData && !loadError) {
   <div class="empty-state">
-    <mat-icon>auto_awesome</mat-icon>
-    <p>Select a lesson plan to view AI recommendations.</p>
+    <div class="empty-icon-wrap"><mat-icon>auto_awesome</mat-icon></div>
+    <h3>Ready for AI Analysis</h3>
+    <p>Select a lesson plan above to generate intelligent recommendations.</p>
+    <div class="empty-features">
+      <div class="empty-feature"><mat-icon>insights</mat-icon> Risk Assessment</div>
+      <div class="empty-feature"><mat-icon>next_plan</mat-icon> Next Topic</div>
+      <div class="empty-feature"><mat-icon>psychology</mat-icon> Weak Areas</div>
+      <div class="empty-feature"><mat-icon>calendar_today</mat-icon> Timetable</div>
+    </div>
   </div>
-} @else {
+}
+
+<!-- Error state -->
+@if (!loading() && loadError) {
+  <div class="error-state">
+    <mat-icon>error_outline</mat-icon>
+    <p>{{ loadError }}</p>
+    <button mat-stroked-button (click)="refresh()">Retry</button>
+  </div>
+}
+
+<!-- =========================================================================
+  Main Dashboard Content
+========================================================================== -->
+@if (!loading() && aiData) {
+
+  <!-- Fallback / Online Banner -->
   @if (aiData.fallback_mode) {
-    <div class="fallback-banner">
-      <mat-icon>info_outline</mat-icon>
-      Running in rule-based fallback mode (Ollama offline).
+    <div class="mode-banner mode-fallback">
+      <mat-icon>rule</mat-icon>
+      <div>
+        <strong>Rule-based mode</strong> - Ollama is offline. Showing deterministic recommendations only.
+      </div>
+      <button mat-stroked-button (click)="refresh()" class="banner-btn">Retry AI</button>
+    </div>
+  } @else {
+    <div class="mode-banner mode-ai">
+      <mat-icon>auto_awesome</mat-icon>
+      <div>
+        <strong>AI-powered insights</strong> - Generated with {{ aiHealth?.model ?? 'Mistral 7B' }}.
+      </div>
     </div>
   }
 
-  <!-- Risk Assessment -->
-  <div class="section-grid">
-    <mat-card class="risk-card">
+  <!-- Delay Warnings Strip -->
+  @if (delayWarnings.length > 0) {
+    <div class="delay-strip">
+      <mat-icon class="delay-icon">warning_amber</mat-icon>
+      <span class="delay-label">Alerts:</span>
+      @for (w of delayWarnings; track w) {
+        <span class="delay-chip">{{ w }}</span>
+      }
+    </div>
+  }
+
+  <!-- Row 1: Risk + Next Topic -->
+  <div class="section-grid two-col">
+
+    <!-- Risk Assessment Card -->
+    <mat-card class="risk-card" [class]="'risk-border-' + aiData.risk_assessment.risk_level">
       <mat-card-header>
-        <mat-card-title>Risk Assessment</mat-card-title>
+        <mat-card-title><mat-icon>monitor_heart</mat-icon> Risk Assessment</mat-card-title>
         <span class="spacer"></span>
         <app-risk-badge [level]="aiData.risk_assessment.risk_level" />
       </mat-card-header>
       <mat-card-content>
-        <div class="risk-score-row">
-          <div class="risk-score">{{ aiData.risk_assessment.risk_score | number:'1.0-0' }}<span class="score-max">/100</span></div>
-          <div class="risk-meta">
-            <div>Completion: {{ aiData.risk_assessment.completion_percentage | number:'1.0-0' }}%</div>
-            <div>Delayed topics: {{ aiData.risk_assessment.delayed_topics_count }}</div>
-            <div>Hours behind: {{ aiData.risk_assessment.hours_behind }}h</div>
+        <div class="risk-layout">
+          <div class="risk-gauge">
+            <apx-chart
+              [series]="riskGaugeOptions.series"
+              [chart]="riskGaugeOptions.chart"
+              [plotOptions]="riskGaugeOptions.plotOptions"
+              [fill]="riskGaugeOptions.fill"
+              [labels]="riskGaugeOptions.labels"
+              [colors]="riskGaugeOptions.colors">
+            </apx-chart>
           </div>
-        </div>
-        <mat-progress-bar mode="determinate" [value]="aiData.risk_assessment.risk_score" [color]="aiData.risk_assessment.risk_score > 60 ? 'warn' : 'primary'" />
-        @if (aiData.risk_assessment.risk_factors.length > 0) {
-          <div class="risk-factors">
-            <strong>Risk Factors:</strong>
-            @for (factor of aiData.risk_assessment.risk_factors; track factor) {
-              <div class="factor-item"><mat-icon>warning_amber</mat-icon> {{ factor }}</div>
+          <div class="risk-metrics">
+            <div class="metric-row">
+              <mat-icon>task_alt</mat-icon>
+              <span class="metric-label">Completion</span>
+              <span class="metric-val">{{ aiData.risk_assessment.completion_percentage | number:'1.0-0' }}%</span>
+            </div>
+            <div class="metric-row">
+              <mat-icon>schedule</mat-icon>
+              <span class="metric-label">Delayed topics</span>
+              <span class="metric-val" [class.val-danger]="aiData.risk_assessment.delayed_topics_count > 0">
+                {{ aiData.risk_assessment.delayed_topics_count }}
+              </span>
+            </div>
+            <div class="metric-row">
+              <mat-icon>timer</mat-icon>
+              <span class="metric-label">Hours behind</span>
+              <span class="metric-val" [class.val-danger]="aiData.risk_assessment.hours_behind > 0">
+                {{ aiData.risk_assessment.hours_behind }}h
+              </span>
+            </div>
+            <div class="metric-row">
+              <mat-icon>speed</mat-icon>
+              <span class="metric-label">Topics / week</span>
+              <span class="metric-val">{{ aiData.risk_assessment.topics_per_week | number:'1.1-1' }}</span>
+            </div>
+            @if (aiData.risk_assessment.predicted_completion_date) {
+              <div class="metric-row">
+                <mat-icon>event</mat-icon>
+                <span class="metric-label">Est. completion</span>
+                <span class="metric-val small">{{ aiData.risk_assessment.predicted_completion_date | date:'dd MMM yyyy' }}</span>
+              </div>
             }
           </div>
+        </div>
+
+        @if (aiData.risk_assessment.risk_factors.length > 0) {
+          <mat-divider class="divider-gap"></mat-divider>
+          <div class="factor-section">
+            <div class="factor-heading"><mat-icon>report_problem</mat-icon> Risk Factors</div>
+            @for (f of aiData.risk_assessment.risk_factors; track f) {
+              <div class="factor-item"><mat-icon>chevron_right</mat-icon> {{ f }}</div>
+            }
+          </div>
+        }
+        @if (aiData.risk_assessment.mitigation_suggestions.length > 0) {
+          <div class="mitigation-section">
+            <div class="mitigation-heading"><mat-icon>lightbulb</mat-icon> Mitigations</div>
+            @for (m of aiData.risk_assessment.mitigation_suggestions; track m) {
+              <div class="mitigation-item"><mat-icon>{{ getMitigationIcon(m) }}</mat-icon> {{ m }}</div>
+            }
+          </div>
+        }
+
+        @if (aiData.llm_insights?.risk) {
+          <mat-expansion-panel class="insight-panel" hideToggle>
+            <mat-expansion-panel-header>
+              <mat-panel-title><mat-icon class="ai-panel-icon">psychology</mat-icon> AI Risk Analysis</mat-panel-title>
+              <mat-panel-description>Expand for LLM insights</mat-panel-description>
+            </mat-expansion-panel-header>
+            <div class="llm-insight-body">
+              <p class="insight-narrative">{{ aiData.llm_insights!.risk!.executive_summary }}</p>
+              @if (aiData.llm_insights!.risk!.key_concerns.length > 0) {
+                <div class="insight-block">
+                  <div class="insight-block-title"><mat-icon>warning</mat-icon> Key Concerns</div>
+                  @for (c of aiData.llm_insights!.risk!.key_concerns; track c) {
+                    <div class="insight-list-item"><mat-icon>fiber_manual_record</mat-icon> {{ c }}</div>
+                  }
+                </div>
+              }
+              @if (aiData.llm_insights!.risk!.immediate_actions.length > 0) {
+                <div class="insight-block">
+                  <div class="insight-block-title"><mat-icon>bolt</mat-icon> Immediate Actions</div>
+                  @for (a of aiData.llm_insights!.risk!.immediate_actions; track a) {
+                    <div class="insight-list-item action"><mat-icon>check</mat-icon> {{ a }}</div>
+                  }
+                </div>
+              }
+              <div class="insight-strategy">
+                <mat-icon>account_tree</mat-icon>
+                <span>{{ aiData.llm_insights!.risk!.long_term_strategy }}</span>
+              </div>
+            </div>
+          </mat-expansion-panel>
         }
       </mat-card-content>
     </mat-card>
 
-    <!-- Next Topic -->
+    <!-- Next Topic Card -->
     @if (aiData.next_topic) {
       <mat-card class="next-topic-card">
         <mat-card-header>
-          <mat-card-title>Next Recommended Topic</mat-card-title>
-          <span class="priority-badge" [class.high-priority]="aiData.next_topic.priority_score > 70">
-            Priority: {{ aiData.next_topic.priority_score | number:'1.0-0' }}
+          <mat-card-title><mat-icon>next_plan</mat-icon> Next Recommended Topic</mat-card-title>
+          <span class="spacer"></span>
+          <span class="priority-badge" [class.priority-high]="aiData.next_topic.priority_score > 70">
+            P: {{ aiData.next_topic.priority_score | number:'1.0-0' }}
           </span>
         </mat-card-header>
         <mat-card-content>
-          <div class="next-topic-title">{{ aiData.next_topic.topic_title }}</div>
-          <div class="next-topic-chapter">in {{ aiData.next_topic.chapter_title }}</div>
-          <div class="next-topic-meta">
-            <span><mat-icon>schedule</mat-icon> {{ aiData.next_topic.estimated_hours }}h</span>
-            <span><mat-icon>school</mat-icon> {{ aiData.next_topic.suggested_method | titlecase }}</span>
-            @if (aiData.next_topic.is_delayed) {
-              <span class="delayed-badge"><mat-icon>warning</mat-icon> {{ aiData.next_topic.days_overdue }} days overdue</span>
-            }
+          <div class="next-topic-hero">
+            <div class="next-topic-title">{{ aiData.next_topic.topic_title }}</div>
+            <div class="next-topic-chapter"><mat-icon>bookmark</mat-icon> {{ aiData.next_topic.chapter_title }}</div>
           </div>
-          <p class="next-topic-reason">{{ aiData.next_topic.reason }}</p>
+          @if (aiData.next_topic.is_delayed) {
+            <div class="delay-alert-banner">
+              <mat-icon>warning</mat-icon>
+              This topic is <strong>{{ aiData.next_topic.days_overdue }} day{{ aiData.next_topic.days_overdue !== 1 ? 's' : '' }}</strong> overdue
+            </div>
+          }
+          <div class="next-topic-chips">
+            <span class="info-chip"><mat-icon>timer</mat-icon> {{ aiData.next_topic.estimated_hours }}h</span>
+            <span class="info-chip method-chip"><mat-icon>school</mat-icon> {{ formatMethod(aiData.next_topic.suggested_method) }}</span>
+          </div>
+          <p class="reason-text">{{ aiData.next_topic.reason }}</p>
+
+          @if (aiData.llm_insights?.next_topic) {
+            <mat-expansion-panel class="insight-panel" hideToggle>
+              <mat-expansion-panel-header>
+                <mat-panel-title><mat-icon class="ai-panel-icon">auto_awesome</mat-icon> AI Teaching Guidance</mat-panel-title>
+                <mat-panel-description>Expand for delivery tips</mat-panel-description>
+              </mat-expansion-panel-header>
+              <div class="llm-insight-body">
+                <p class="insight-narrative">{{ aiData.llm_insights!.next_topic!.recommendation_reason }}</p>
+                <div class="insight-block">
+                  <div class="insight-block-title"><mat-icon>school</mat-icon> Teaching Guidance</div>
+                  <p>{{ aiData.llm_insights!.next_topic!.teaching_guidance }}</p>
+                </div>
+                @if (aiData.llm_insights!.next_topic!.preparation_tips.length > 0) {
+                  <div class="insight-block">
+                    <div class="insight-block-title"><mat-icon>checklist</mat-icon> Preparation Tips</div>
+                    @for (tip of aiData.llm_insights!.next_topic!.preparation_tips; track tip) {
+                      <div class="insight-list-item"><mat-icon>check_circle_outline</mat-icon> {{ tip }}</div>
+                    }
+                  </div>
+                }
+                @if (aiData.llm_insights!.next_topic!.student_engagement_tips.length > 0) {
+                  <div class="insight-block">
+                    <div class="insight-block-title"><mat-icon>groups</mat-icon> Student Engagement</div>
+                    @for (tip of aiData.llm_insights!.next_topic!.student_engagement_tips; track tip) {
+                      <div class="insight-list-item"><mat-icon>emoji_objects</mat-icon> {{ tip }}</div>
+                    }
+                  </div>
+                }
+                <div class="duration-note">
+                  <mat-icon>hourglass_top</mat-icon>
+                  {{ aiData.llm_insights!.next_topic!.estimated_duration_note }}
+                </div>
+              </div>
+            </mat-expansion-panel>
+          }
         </mat-card-content>
       </mat-card>
     }
   </div>
 
+  <!-- AI Summary -->
+  @if (aiData.ai_summary || aiData.llm_insights?.summary) {
+    <mat-card class="ai-summary-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon class="ai-glow-icon">auto_awesome</mat-icon>
+          AI Progress Summary
+        </mat-card-title>
+        @if (!aiData.fallback_mode) {
+          <span class="ai-gen-badge">AI Generated</span>
+        }
+      </mat-card-header>
+      <mat-card-content>
+        @if (aiData.ai_summary) {
+          <p class="summary-text">{{ aiData.ai_summary }}</p>
+        }
+        @if (aiData.llm_insights?.summary) {
+          <mat-accordion>
+            <mat-expansion-panel class="insight-panel">
+              <mat-expansion-panel-header>
+                <mat-panel-title><mat-icon class="ai-panel-icon">analytics</mat-icon> Detailed AI Insights</mat-panel-title>
+              </mat-expansion-panel-header>
+              <div class="llm-insight-body">
+                @if (aiData.llm_insights!.summary!.teaching_style_analysis) {
+                  <div class="insight-block">
+                    <div class="insight-block-title"><mat-icon>style</mat-icon> Teaching Style Analysis</div>
+                    <p>{{ aiData.llm_insights!.summary!.teaching_style_analysis }}</p>
+                  </div>
+                }
+                @if (aiData.llm_insights!.summary!.student_performance_insight) {
+                  <div class="insight-block">
+                    <div class="insight-block-title"><mat-icon>person_search</mat-icon> Student Performance</div>
+                    <p>{{ aiData.llm_insights!.summary!.student_performance_insight }}</p>
+                  </div>
+                }
+                @if (aiData.llm_insights!.summary!.recommendations && summary!.recommendations.length) {
+                  <div class="insight-block">
+                    <div class="insight-block-title"><mat-icon>recommend</mat-icon> Recommendations</div>
+                    @for (r of aiData.llm_insights!.summary!.recommendations; track r) {
+                      <div class="insight-list-item action"><mat-icon>arrow_right</mat-icon> {{ r }}</div>
+                    }
+                  </div>
+                }
+                @if (aiData.llm_insights!.summary!.motivational_note) {
+                  <div class="motivational-note">
+                    <mat-icon>favorite</mat-icon>
+                    {{ aiData.llm_insights!.summary!.motivational_note }}
+                  </div>
+                }
+              </div>
+            </mat-expansion-panel>
+          </mat-accordion>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+
   <!-- Weak Areas -->
   @if (aiData.weak_areas.length > 0) {
     <mat-card class="weak-areas-card">
       <mat-card-header>
-        <mat-card-title>Weak Areas</mat-card-title>
-        <mat-card-subtitle>Topics requiring attention</mat-card-subtitle>
+        <mat-card-title>
+          <mat-icon>report</mat-icon>
+          Weak Areas
+          <span class="count-badge">{{ aiData.weak_areas.length }}</span>
+        </mat-card-title>
+        <mat-card-subtitle>Topics with poor student understanding - revision recommended</mat-card-subtitle>
       </mat-card-header>
       <mat-card-content>
-        <div class="weak-areas-list">
-          @for (area of aiData.weak_areas; track area.topic_id) {
-            <div class="weak-area-item">
-              <div class="weak-area-info">
-                <div class="weak-title">{{ area.topic_title }}</div>
-                <div class="weak-chapter">{{ area.chapter_title }}</div>
+        @if (aiData.llm_insights?.weak_areas?.overall_diagnosis) {
+          <div class="llm-diagnosis">
+            <mat-icon>psychology</mat-icon>
+            <p>{{ aiData.llm_insights!.weak_areas!.overall_diagnosis }}</p>
+          </div>
+        }
+        <mat-accordion multi class="weak-accordion">
+          @for (area of aiData.weak_areas; track area.topic_id; let i = $index) {
+            <mat-expansion-panel class="weak-panel" hideToggle>
+              <mat-expansion-panel-header class="weak-panel-header">
+                <mat-panel-title>
+                  <div class="weak-title-row">
+                    <span class="weak-num">{{ i + 1 }}</span>
+                    <div>
+                      <div class="weak-topic-name">{{ area.topic_title }}</div>
+                      <div class="weak-chapter-name"><mat-icon>bookmark</mat-icon> {{ area.chapter_title }}</div>
+                    </div>
+                  </div>
+                </mat-panel-title>
+                <mat-panel-description>
+                  <span class="understanding-chip" [class]="'und-' + (area.understanding_level ?? 'poor')">
+                    {{ area.understanding_level ?? 'poor' | titlecase }}
+                  </span>
+                  @if (area.revision_recommended) {
+                    <span class="revision-flag"><mat-icon>rate_review</mat-icon> Revision needed</span>
+                  }
+                </mat-panel-description>
+              </mat-expansion-panel-header>
+              <div class="weak-detail">
+                @if (area.last_taught) {
+                  <div class="detail-row"><mat-icon>event</mat-icon><span>Last taught: {{ area.last_taught | date:'dd MMM yyyy' }}</span></div>
+                }
+                @if (area.issues) {
+                  <div class="detail-row issues"><mat-icon>error_outline</mat-icon><span>{{ area.issues }}</span></div>
+                }
+                <div class="suggested-approach"><mat-icon>tips_and_updates</mat-icon><span>{{ area.suggested_approach }}</span></div>
+                @if (aiData.llm_insights?.weak_areas?.revision_plan) {
+                  @for (rp of aiData.llm_insights!.weak_areas!.revision_plan; track rp.topic) {
+                    @if (rp.topic === area.topic_title) {
+                      <div class="llm-revision-tip">
+                        <mat-icon>auto_awesome</mat-icon>
+                        <div>
+                          <strong>AI Strategy:</strong> {{ rp.strategy }}
+                          <span class="revision-method-chip">{{ formatMethod(rp.suggested_method) }}</span>
+                        </div>
+                      </div>
+                    }
+                  }
+                }
               </div>
-              @if (area.revision_recommended) {
-                <span class="revision-badge">Revision Recommended</span>
-              }
-              <div class="weak-approach">{{ area.suggested_approach }}</div>
-            </div>
+            </mat-expansion-panel>
           }
+        </mat-accordion>
+
+        @if (aiData.llm_insights?.weak_areas?.general_improvement_tips?.length) {
+          <div class="improvement-tips">
+            <div class="tips-heading"><mat-icon>tips_and_updates</mat-icon> General Improvement Tips</div>
+            @for (tip of aiData.llm_insights!.weak_areas!.general_improvement_tips; track tip) {
+              <div class="tip-item"><mat-icon>check</mat-icon> {{ tip }}</div>
+            }
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!-- Teaching Method Effectiveness -->
+  @if (aiData.method_effectiveness.length > 0) {
+    <mat-card class="method-card">
+      <mat-card-header>
+        <mat-card-title><mat-icon>bar_chart</mat-icon> Teaching Method Effectiveness</mat-card-title>
+        <mat-card-subtitle>Based on average student understanding score (0 - 4)</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="method-layout">
+          <div class="method-chart">
+            <apx-chart
+              [series]="methodChartOptions.series"
+              [chart]="methodChartOptions.chart"
+              [xaxis]="methodChartOptions.xaxis"
+              [yaxis]="methodChartOptions.yaxis"
+              [dataLabels]="methodChartOptions.dataLabels"
+              [plotOptions]="methodChartOptions.plotOptions"
+              [tooltip]="methodChartOptions.tooltip"
+              [fill]="methodChartOptions.fill"
+              [colors]="methodChartOptions.colors">
+            </apx-chart>
+          </div>
+          <div class="method-cards">
+            @for (m of aiData.method_effectiveness; track m.method; let i = $index) {
+              <div class="method-item" [class]="getEffectivenessClass(m)">
+                <div class="method-name">{{ formatMethod(m.method) }}</div>
+                <div class="method-score-row">
+                  <span class="method-score" [style.color]="getMethodColor(i)">
+                    {{ m.avg_understanding_score | number:'1.2-2' }}
+                  </span>
+                  <span class="method-uses">{{ m.usage_count }}x</span>
+                </div>
+                <div class="method-eff-label">{{ getEffectivenessLabel(m.avg_understanding_score) }}</div>
+                <mat-progress-bar mode="determinate" [value]="m.avg_understanding_score / 4 * 100"></mat-progress-bar>
+              </div>
+            }
+          </div>
         </div>
       </mat-card-content>
     </mat-card>
   }
 
-  <!-- Timetable -->
+  <!-- Smart Timetable -->
   @if (aiData.timetable_suggestions.length > 0) {
     <mat-card class="timetable-card">
       <mat-card-header>
-        <mat-card-title>Suggested Timetable</mat-card-title>
-        <mat-card-subtitle>Next 4 weeks</mat-card-subtitle>
-      </mat-card-header>
-      <mat-card-content>
-        <table mat-table [dataSource]="aiData.timetable_suggestions" class="timetable-table">
-          <ng-container matColumnDef="slot">
-            <th mat-header-cell *matHeaderCellDef>#</th>
-            <td mat-cell *matCellDef="let row">{{ row.slot }}</td>
-          </ng-container>
-          <ng-container matColumnDef="date">
-            <th mat-header-cell *matHeaderCellDef>Date</th>
-            <td mat-cell *matCellDef="let row">{{ row.date | date:'dd MMM' }} ({{ row.day_of_week }})</td>
-          </ng-container>
-          <ng-container matColumnDef="topic_title">
-            <th mat-header-cell *matHeaderCellDef>Topic</th>
-            <td mat-cell *matCellDef="let row">{{ row.topic_title }}</td>
-          </ng-container>
-          <ng-container matColumnDef="chapter_title">
-            <th mat-header-cell *matHeaderCellDef>Chapter</th>
-            <td mat-cell *matCellDef="let row">{{ row.chapter_title }}</td>
-          </ng-container>
-          <ng-container matColumnDef="teaching_method">
-            <th mat-header-cell *matHeaderCellDef>Method</th>
-            <td mat-cell *matCellDef="let row">{{ row.teaching_method | titlecase }}</td>
-          </ng-container>
-          <ng-container matColumnDef="hours">
-            <th mat-header-cell *matHeaderCellDef>Hours</th>
-            <td mat-cell *matCellDef="let row">{{ row.suggested_hours }}h</td>
-          </ng-container>
-          <tr mat-header-row *matHeaderRowDef="timetableCols"></tr>
-          <tr mat-row *matRowDef="let row; columns: timetableCols;"></tr>
-        </table>
-      </mat-card-content>
-    </mat-card>
-  }
-
-  <!-- Method Effectiveness Chart -->
-  @if (aiData.method_effectiveness.length > 0) {
-    <mat-card class="chart-card">
-      <mat-card-content>
-        <apx-chart
-          [series]="methodChartOptions.series"
-          [chart]="methodChartOptions.chart"
-          [xaxis]="methodChartOptions.xaxis"
-          [dataLabels]="methodChartOptions.dataLabels"
-          [plotOptions]="methodChartOptions.plotOptions"
-          [title]="methodChartOptions.title"
-        />
-      </mat-card-content>
-    </mat-card>
-  }
-
-  <!-- AI Summary -->
-  @if (aiData.ai_summary) {
-    <mat-card class="ai-summary-card">
-      <mat-card-header>
         <mat-card-title>
-          <mat-icon class="ai-icon">auto_awesome</mat-icon>
-          AI Summary
+          <mat-icon>calendar_month</mat-icon>
+          Smart Timetable
         </mat-card-title>
+        <mat-card-subtitle>
+          {{ aiData.timetable_suggestions.length }} scheduled slots across {{ timetableByWeek.length }} week{{ timetableByWeek.length !== 1 ? 's' : '' }}
+        </mat-card-subtitle>
       </mat-card-header>
       <mat-card-content>
-        <p class="summary-text">{{ aiData.ai_summary }}</p>
+        @if (aiData.llm_insights?.timetable) {
+          <div class="timetable-insight-banner">
+            <div class="tt-insight-item">
+              <mat-icon>auto_awesome</mat-icon>
+              <span>{{ aiData.llm_insights!.timetable!.weekly_goal }}</span>
+            </div>
+            @if (aiData.llm_insights!.timetable!.risk_note) {
+              <div class="tt-insight-item tt-risk">
+                <mat-icon>warning_amber</mat-icon>
+                <span>{{ aiData.llm_insights!.timetable!.risk_note }}</span>
+              </div>
+            }
+          </div>
+        }
+
+        <mat-tab-group animationDuration="200ms" class="timetable-tabs">
+          @for (week of timetableByWeek; track week.weekStart) {
+            <mat-tab [label]="week.label">
+              <div class="timetable-week">
+                @for (entry of week.entries; track entry.slot) {
+                  <div class="timetable-slot">
+                    <div class="slot-number">#{{ entry.slot }}</div>
+                    <div class="slot-date">
+                      <div class="slot-day">{{ entry.day_of_week }}</div>
+                      <div class="slot-dd">{{ entry.date | date:'dd MMM' }}</div>
+                    </div>
+                    <div class="slot-topic">
+                      <div class="slot-topic-name">{{ entry.topic_title }}</div>
+                      <div class="slot-chapter">{{ entry.chapter_title }}</div>
+                    </div>
+                    <div class="slot-method"><mat-icon>school</mat-icon> {{ formatMethod(entry.teaching_method) }}</div>
+                    <div class="slot-hours"><mat-icon>timer</mat-icon> {{ entry.suggested_hours }}h</div>
+                  </div>
+                }
+              </div>
+            </mat-tab>
+          }
+          <mat-tab label="All Slots">
+            <div class="timetable-table-wrap">
+              <table mat-table [dataSource]="aiData.timetable_suggestions" class="timetable-table">
+                <ng-container matColumnDef="slot">
+                  <th mat-header-cell *matHeaderCellDef>#</th>
+                  <td mat-cell *matCellDef="let row">{{ row.slot }}</td>
+                </ng-container>
+                <ng-container matColumnDef="date">
+                  <th mat-header-cell *matHeaderCellDef>Date</th>
+                  <td mat-cell *matCellDef="let row">
+                    <span class="date-cell">
+                      <span class="date-day">{{ row.day_of_week }}</span>
+                      {{ row.date | date:'dd MMM yyyy' }}
+                    </span>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="topic_title">
+                  <th mat-header-cell *matHeaderCellDef>Topic</th>
+                  <td mat-cell *matCellDef="let row">{{ row.topic_title }}</td>
+                </ng-container>
+                <ng-container matColumnDef="chapter_title">
+                  <th mat-header-cell *matHeaderCellDef>Chapter</th>
+                  <td mat-cell *matCellDef="let row">{{ row.chapter_title }}</td>
+                </ng-container>
+                <ng-container matColumnDef="teaching_method">
+                  <th mat-header-cell *matHeaderCellDef>Method</th>
+                  <td mat-cell *matCellDef="let row">
+                    <span class="method-cell-chip">{{ formatMethod(row.teaching_method) }}</span>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="hours">
+                  <th mat-header-cell *matHeaderCellDef>Hours</th>
+                  <td mat-cell *matCellDef="let row">{{ row.suggested_hours }}h</td>
+                </ng-container>
+                <tr mat-header-row *matHeaderRowDef="timetableCols; sticky: true"></tr>
+                <tr mat-row *matRowDef="let row; columns: timetableCols;"></tr>
+              </table>
+            </div>
+          </mat-tab>
+        </mat-tab-group>
+
+        @if (aiData.llm_insights?.timetable?.optimizations?.length) {
+          <mat-expansion-panel class="insight-panel" hideToggle>
+            <mat-expansion-panel-header>
+              <mat-panel-title><mat-icon class="ai-panel-icon">tune</mat-icon> AI Schedule Optimisations</mat-panel-title>
+            </mat-expansion-panel-header>
+            <div class="llm-insight-body">
+              <p class="insight-narrative">{{ aiData.llm_insights!.timetable!.schedule_insights }}</p>
+              @for (opt of aiData.llm_insights!.timetable!.optimizations; track opt) {
+                <div class="insight-list-item action"><mat-icon>bolt</mat-icon> {{ opt }}</div>
+              }
+            </div>
+          </mat-expansion-panel>
+        }
       </mat-card-content>
     </mat-card>
   }
+
 }
+
