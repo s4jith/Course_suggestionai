@@ -35,8 +35,20 @@ export const routes: Routes = [
         loadComponent: () => import('./lesson-plan/lesson-plan-list/lesson-plan-list.component').then(m => m.LessonPlanListComponent),
       },
       {
+        path: 'lesson-plans/new',
+        loadComponent: () => import('./lesson-plan/lesson-plan-form/lesson-plan-form.component').then(m => m.LessonPlanFormComponent),
+      },
+      {
+        path: 'lesson-plans/pending',
+        loadComponent: () => import('./lesson-plan/pending-topics/pending-topics.component').then(m => m.PendingTopicsComponent),
+      },
+      {
         path: 'lesson-plans/:id',
         loadComponent: () => import('./lesson-plan/lesson-plan-detail/lesson-plan-detail.component').then(m => m.LessonPlanDetailComponent),
+      },
+      {
+        path: 'progress',
+        loadComponent: () => import('./lesson-plan/progress-tracker/progress-tracker.component').then(m => m.ProgressTrackerComponent),
       },
       {
         path: 'ai',

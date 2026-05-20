@@ -1,0 +1,88 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Pending Topics</h1>
+      <p class="page-subtitle">Topics not yet marked as completed</p>
+    </div>
+
+    <mat-form-field appearance="outline" class="plan-filter">
+      <mat-label>Filter by Lesson Plan</mat-label>
+      <mat-select [value]="selectedPlanId" (selectionChange)="onPlanFilter($event.value)">
+        <mat-option value="">All Plans</mat-option>
+        @for (p of plans; track p.id) {
+          <mat-option [value]="p.id">{{ p.title }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  @if (loading) {
+    <app-loading-skeleton [rows]="[100, 100, 100, 100, 100]" />
+  } @else if (filteredTopics.length === 0) {
+    <div class="empty-state">
+      <mat-icon class="empty-icon">check_circle</mat-icon>
+      <p>All topics are up to date</p>
+    </div>
+  } @else {
+    <div class="table-wrapper">
+      <table mat-table [dataSource]="filteredTopics" class="topics-table">
+
+        <ng-container matColumnDef="topic">
+          <th mat-header-cell *matHeaderCellDef>Topic</th>
+          <td mat-cell *matCellDef="let row">
+            <div class="topic-name">{{ row.topic_title ?? row.topic_id }}</div>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="plan">
+          <th mat-header-cell *matHeaderCellDef>Lesson Plan</th>
+          <td mat-cell *matCellDef="let row">
+            <span class="plan-label">{{ getPlanTitle(row.lesson_plan_id) }}</span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="chapter">
+          <th mat-header-cell *matHeaderCellDef>Chapter</th>
+          <td mat-cell *matCellDef="let row">{{ row.chapter_title ?? '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="planned_date">
+          <th mat-header-cell *matHeaderCellDef>Planned Date</th>
+          <td mat-cell *matCellDef="let row">
+            {{ row.actual_date ? (row.actual_date | date:'mediumDate') : '—' }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let row">
+            <app-topic-status-chip [status]="row.status" />
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="completion">
+          <th mat-header-cell *matHeaderCellDef>Completion</th>
+          <td mat-cell *matCellDef="let row">
+            <div class="completion-cell">
+              <mat-progress-bar mode="determinate" [value]="row.completion_percentage"
+                class="progress-bar" />
+              <span class="pct-label">{{ row.completion_percentage }}%</span>
+            </div>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let row">
+            <button mat-stroked-button color="primary" (click)="openUpdateDialog(row)">
+              <mat-icon>edit</mat-icon> Update
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </table>
+    </div>
+  }
+</div>

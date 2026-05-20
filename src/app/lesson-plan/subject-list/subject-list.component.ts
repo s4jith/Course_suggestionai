@@ -32,6 +32,7 @@ import { Subject } from '../../models/lesson-plan.model';
 export class SubjectListComponent implements OnInit {
   private readonly subjectApi = inject(SubjectApiService);
   private readonly notification = inject(NotificationService);
+  private readonly dialog = inject(MatDialog);
 
   displayedColumns = ['code', 'name', 'department', 'semester', 'total_hours', 'actions'];
   subjects: Subject[] = [];
@@ -73,6 +74,14 @@ export class SubjectListComponent implements OnInit {
         this.subjects = res?.data ?? [];
         this.total = res?.total ?? 0;
       });
+  }
+
+  async openCreateSubject(): Promise<void> {
+    const { SubjectFormDialogComponent } = await import('../subject-form-dialog/subject-form-dialog.component');
+    const ref = this.dialog.open(SubjectFormDialogComponent, { width: '560px' });
+    ref.afterClosed().subscribe((result: Subject) => {
+      if (result) this.subjects = [result, ...this.subjects];
+    });
   }
 
   deactivate(id: string): void {

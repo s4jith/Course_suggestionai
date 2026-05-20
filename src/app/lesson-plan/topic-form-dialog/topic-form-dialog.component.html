@@ -1,0 +1,65 @@
+<h2 mat-dialog-title>Add Topic to "{{ data.chapter.title }}"</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="form" novalidate class="dialog-form">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Topic Title</mat-label>
+      <input matInput formControlName="title" placeholder="e.g. Linked List Implementation" />
+      @if (form.get('title')?.invalid && form.get('title')?.touched) {
+        <mat-error>Topic title is required</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Description (Optional)</mat-label>
+      <textarea matInput formControlName="description" rows="2"></textarea>
+    </mat-form-field>
+
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="flex-1">
+        <mat-label>Planned Hours</mat-label>
+        <input matInput type="number" formControlName="planned_hours" placeholder="1" step="0.5" />
+        <mat-hint>Duration in hours</mat-hint>
+        @if (form.get('planned_hours')?.invalid && form.get('planned_hours')?.touched) {
+          <mat-error>At least 0.5 hours required</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="flex-1">
+        <mat-label>Planned Date (Optional)</mat-label>
+        <input matInput type="date" formControlName="planned_date" />
+      </mat-form-field>
+    </div>
+
+    <div class="subtopics-section">
+      <div class="subtopics-header">
+        <span class="subtopics-label">Subtopics</span>
+        <button type="button" mat-stroked-button color="primary" (click)="addSubtopic()">
+          <mat-icon>add</mat-icon> Add Subtopic
+        </button>
+      </div>
+
+      <div formArrayName="subtopics">
+        @for (ctrl of subtopics.controls; track $index; let i = $index) {
+          <div class="subtopic-row" [formGroupName]="i">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Subtopic {{ i + 1 }}</mat-label>
+              <input matInput formControlName="title" placeholder="e.g. Singly Linked List" />
+            </mat-form-field>
+            <button type="button" mat-icon-button color="warn" (click)="removeSubtopic(i)">
+              <mat-icon>remove_circle_outline</mat-icon>
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close>Cancel</button>
+  <button mat-flat-button color="primary" (click)="onSubmit()" [disabled]="loading">
+    @if (loading) { <mat-spinner diameter="18" style="display:inline-block;margin-right:6px" /> }
+    Add Topic
+  </button>
+</mat-dialog-actions>

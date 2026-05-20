@@ -1,6 +1,6 @@
 @if (loading) {
-  <div class="loading-center">
-    <mat-spinner diameter="48" />
+  <div class="loading-wrapper">
+    <app-loading-skeleton [rows]="[100, 80, 100, 90, 75, 100]" />
   </div>
 } @else if (!plan) {
   <div class="empty-state">
@@ -41,13 +41,16 @@
     <mat-card-header>
       <mat-card-title>Chapters &amp; Topics</mat-card-title>
       <span class="spacer"></span>
+      <button mat-stroked-button color="primary" (click)="openAddChapter()">
+        <mat-icon>add</mat-icon> Add Chapter
+      </button>
       <span class="plan-status status-{{ plan.status }}">{{ plan.status | titlecase }}</span>
     </mat-card-header>
     <mat-card-content>
       @if (plan.chapters.length === 0) {
         <div class="empty-state">
           <mat-icon>library_books</mat-icon>
-          <p>No chapters yet.</p>
+          <p>No chapters yet. Add the first chapter to get started.</p>
         </div>
       } @else {
         <mat-accordion multi>
@@ -63,14 +66,30 @@
                 </mat-panel-description>
               </mat-expansion-panel-header>
 
+              <div class="chapter-actions">
+                <button mat-stroked-button color="primary" (click)="openAddTopic(chapter); $event.stopPropagation()">
+                  <mat-icon>add</mat-icon> Add Topic
+                </button>
+              </div>
+
               <div class="topics-list">
                 @for (topic of chapter.topics; track topic.topic_id) {
                   <div class="topic-item">
                     <mat-icon class="topic-icon">subject</mat-icon>
                     <div class="topic-info">
-                      <div class="topic-title">{{ topic.order }}. {{ topic.title }}</div>
+                      <div class="topic-title-row">
+                        <span class="topic-title">{{ topic.order }}. {{ topic.title }}</span>
+                        <app-topic-status-chip
+                          [status]="getTopicProgress(topic.topic_id)?.status ?? 'pending'" />
+                      </div>
                       @if (topic.description) {
                         <div class="topic-desc">{{ topic.description }}</div>
+                      }
+                      @if (getTopicProgress(topic.topic_id); as prog) {
+                        <mat-progress-bar
+                          mode="determinate"
+                          [value]="prog.completion_percentage"
+                          class="topic-progress-bar" />
                       }
                       @if (topic.subtopics.length > 0) {
                         <div class="subtopics">
@@ -80,7 +99,14 @@
                         </div>
                       }
                     </div>
-                    <div class="topic-hours">{{ topic.planned_hours }}h</div>
+                    <div class="topic-meta">
+                      <span class="topic-hours">{{ topic.planned_hours }}h</span>
+                      <button mat-stroked-button class="update-btn"
+                        (click)="openUpdateProgress(chapter, topic)">
+                        <mat-icon>edit_note</mat-icon>
+                        {{ getTopicProgress(topic.topic_id) ? 'Update' : 'Record' }}
+                      </button>
+                    </div>
                   </div>
                 }
               </div>
@@ -91,3 +117,4 @@
     </mat-card-content>
   </mat-card>
 }
+

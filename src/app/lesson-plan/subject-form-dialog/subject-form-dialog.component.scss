@@ -1,0 +1,10 @@
+.dialog-form { display: flex; flex-direction: column; gap: 4px; min-width: 480px; }
+
+.form-row {
+  display: flex;
+  gap: 12px;
+  .flex-1 { flex: 1; }
+  .flex-2 { flex: 2; }
+}
+
+.full-width { width: 100%; }

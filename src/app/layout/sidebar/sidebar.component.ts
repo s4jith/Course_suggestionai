@@ -26,6 +26,8 @@ export class SidebarComponent {
     { label: 'Dashboard',         icon: 'dashboard',          route: '/dashboard' },
     { label: 'Subjects',          icon: 'menu_book',          route: '/subjects' },
     { label: 'Lesson Plans',      icon: 'assignment',         route: '/lesson-plans' },
+    { label: 'Pending Topics',    icon: 'pending_actions',    route: '/lesson-plans/pending' },
+    { label: 'Progress Tracker',  icon: 'bar_chart',          route: '/progress' },
     { label: 'AI Recommendations',icon: 'auto_awesome',       route: '/ai' },
   ];
 }
