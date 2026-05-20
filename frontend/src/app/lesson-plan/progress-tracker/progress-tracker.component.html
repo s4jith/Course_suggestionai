@@ -1,0 +1,136 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Progress Tracker</h1>
+      <p class="page-subtitle">Track topic completion across lesson plans</p>
+    </div>
+
+    @if (!loadingPlans) {
+      <mat-form-field appearance="outline" class="plan-selector">
+        <mat-label>Lesson Plan</mat-label>
+        <mat-select [value]="selectedPlanId" (selectionChange)="onPlanChange($event.value)">
+          @for (p of plans; track p.id) {
+            <mat-option [value]="p.id">{{ p.title }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    }
+  </div>
+
+  @if (loading) {
+    <app-loading-skeleton [rows]="[100, 80, 100, 90, 75]" />
+  } @else if (!selectedPlanId) {
+    <div class="empty-state">
+      <mat-icon>bar_chart</mat-icon>
+      <p>Select a lesson plan to view progress</p>
+    </div>
+  } @else {
+    <!-- Stats Cards -->
+    <div class="stats-row">
+      <mat-card class="stat-card completed">
+        <mat-card-content>
+          <div class="stat-value">{{ stats?.completed_topics ?? 0 }}</div>
+          <div class="stat-label">Completed</div>
+        </mat-card-content>
+      </mat-card>
+      <mat-card class="stat-card in-progress">
+        <mat-card-content>
+          <div class="stat-value">{{ stats?.in_progress_topics ?? 0 }}</div>
+          <div class="stat-label">In Progress</div>
+        </mat-card-content>
+      </mat-card>
+      <mat-card class="stat-card pending">
+        <mat-card-content>
+          <div class="stat-value">{{ stats?.pending_topics ?? 0 }}</div>
+          <div class="stat-label">Pending</div>
+        </mat-card-content>
+      </mat-card>
+      <mat-card class="stat-card skipped">
+        <mat-card-content>
+          <div class="stat-value">{{ stats?.skipped_topics ?? 0 }}</div>
+          <div class="stat-label">Skipped</div>
+        </mat-card-content>
+      </mat-card>
+      <mat-card class="stat-card overall">
+        <mat-card-content>
+          <div class="stat-value">{{ overallPct }}%</div>
+          <div class="stat-label">Overall Completion</div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <div class="chart-table-row">
+      <!-- Donut Chart -->
+      <mat-card class="chart-card">
+        <mat-card-header>
+          <mat-card-title>Topic Distribution</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <apx-chart
+            [series]="chartOptions.series"
+            [chart]="chartOptions.chart"
+            [labels]="chartOptions.labels"
+            [colors]="chartOptions.colors"
+            [legend]="chartOptions.legend"
+            [plotOptions]="chartOptions.plotOptions"
+            [dataLabels]="chartOptions.dataLabels"
+            [tooltip]="chartOptions.tooltip"
+          />
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Progress Table -->
+      <mat-card class="table-card">
+        <mat-card-header class="table-header">
+          <mat-card-title>Progress Records</mat-card-title>
+          <mat-form-field appearance="outline" class="status-filter">
+            <mat-label>Filter Status</mat-label>
+            <mat-select (selectionChange)="onStatusFilter($event.value)">
+              <mat-option value="">All</mat-option>
+              <mat-option value="pending">Pending</mat-option>
+              <mat-option value="in_progress">In Progress</mat-option>
+              <mat-option value="completed">Completed</mat-option>
+              <mat-option value="skipped">Skipped</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </mat-card-header>
+        <mat-card-content class="table-content">
+          <table mat-table [dataSource]="filteredRecords" class="progress-table">
+            <ng-container matColumnDef="topic">
+              <th mat-header-cell *matHeaderCellDef>Topic</th>
+              <td mat-cell *matCellDef="let row">
+                <span class="topic-label">{{ row.topic_title ?? row.topic_id }}</span>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="chapter">
+              <th mat-header-cell *matHeaderCellDef>Chapter</th>
+              <td mat-cell *matCellDef="let row">{{ row.chapter_title ?? '—' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef>Status</th>
+              <td mat-cell *matCellDef="let row">
+                <app-topic-status-chip [status]="row.status" />
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="completion">
+              <th mat-header-cell *matHeaderCellDef>%</th>
+              <td mat-cell *matCellDef="let row">{{ row.completion_percentage }}%</td>
+            </ng-container>
+            <ng-container matColumnDef="method">
+              <th mat-header-cell *matHeaderCellDef>Method</th>
+              <td mat-cell *matCellDef="let row">{{ row.teaching_method ?? '—' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="date">
+              <th mat-header-cell *matHeaderCellDef>Date</th>
+              <td mat-cell *matCellDef="let row">
+                {{ row.actual_date ? (row.actual_date | date:'dd MMM') : '—' }}
+              </td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+          </table>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  }
+</div>

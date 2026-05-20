@@ -1,0 +1,137 @@
+.loading-center,
+.loading-wrapper,
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 64px;
+  color: #94a3b8;
+  gap: 12px;
+  mat-icon { font-size: 56px; width: 56px; height: 56px; }
+}
+
+.loading-wrapper {
+  padding: 24px;
+  align-items: stretch;
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.stat-mini {
+  padding: 16px;
+  border-radius: 10px !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.07) !important;
+  text-align: center;
+}
+
+.stat-mini-value { font-size: 1.6rem; font-weight: 700; color: #1e293b; }
+.stat-mini-label { font-size: 0.78rem; color: #64748b; margin: 4px 0 8px; }
+
+.chapters-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07) !important;
+}
+
+mat-card-header {
+  display: flex;
+  align-items: center;
+  padding-bottom: 8px;
+  gap: 12px;
+}
+
+.spacer { flex: 1; }
+
+.plan-status {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  &.status-active    { background: #dcfce7; color: #166534; }
+  &.status-draft     { background: #f1f5f9; color: #475569; }
+  &.status-completed { background: #dbeafe; color: #1d4ed8; }
+  &.status-archived  { background: #fef9c3; color: #854d0e; }
+}
+
+.chapter-icon { color: #4f46e5; margin-right: 8px; font-size: 20px; }
+
+.chapter-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 4px;
+}
+
+.topics-list { padding: 8px 0; }
+
+.topic-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9;
+  &:last-child { border-bottom: none; }
+}
+
+.topic-icon { color: #94a3b8; font-size: 18px; margin-top: 2px; flex-shrink: 0; }
+.topic-info { flex: 1; min-width: 0; }
+
+.topic-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.topic-title { font-weight: 600; font-size: 0.9rem; color: #1e293b; }
+.topic-desc  { font-size: 0.8rem; color: #64748b; margin-top: 2px; }
+
+.topic-progress-bar {
+  margin-top: 6px;
+  height: 4px !important;
+  border-radius: 2px;
+}
+
+.subtopics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.subtopic-tag {
+  font-size: 0.72rem;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.topic-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.topic-hours {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.update-btn {
+  font-size: 0.75rem !important;
+  padding: 0 10px !important;
+  height: 30px !important;
+  line-height: 30px !important;
+  mat-icon { font-size: 16px; width: 16px; height: 16px; }
+}
+

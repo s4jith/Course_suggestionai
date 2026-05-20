@@ -1,0 +1,413 @@
+<app-page-header
+  title="Analytics Dashboard"
+  subtitle="Institution-wide analytics, progress tracking, and risk monitoring">
+</app-page-header>
+
+<!-- =========================================================================
+  Filter bar
+========================================================================== -->
+<div class="filter-bar mat-elevation-z1">
+  <mat-form-field appearance="outline" class="filter-field">
+    <mat-label>Academic Year</mat-label>
+    <input matInput [(ngModel)]="academicYearInput" placeholder="e.g. 2025-2026">
+    <mat-icon matSuffix>school</mat-icon>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="filter-field">
+    <mat-label>Semester</mat-label>
+    <mat-select [(ngModel)]="semesterInput">
+      <mat-option [value]="null">All Semesters</mat-option>
+      @for (s of semesterOptions; track s) {
+        <mat-option [value]="s">Semester {{ s }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <div class="filter-actions">
+    <button mat-flat-button color="primary" (click)="applyFilters()">
+      <mat-icon>filter_alt</mat-icon> Apply
+    </button>
+    <button mat-stroked-button (click)="clearFilters()">
+      <mat-icon>clear</mat-icon> Clear
+    </button>
+  </div>
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" class="filter-progress"></mat-progress-bar>
+  }
+</div>
+
+<!-- Error banner -->
+@if (error()) {
+  <div class="error-banner">
+    <mat-icon>error_outline</mat-icon>
+    {{ error() }}
+  </div>
+}
+
+<!-- =========================================================================
+  KPI Cards row
+========================================================================== -->
+<div class="kpi-grid">
+  @for (card of kpiCards; track card.key) {
+    <mat-card class="kpi-card" [style.border-left-color]="card.color">
+      <mat-card-content>
+        <div class="kpi-icon" [style.background-color]="card.color + '1a'">
+          <mat-icon [style.color]="card.color">{{ card.icon }}</mat-icon>
+        </div>
+        <div class="kpi-body">
+          <div class="kpi-value">
+            @if (getKpiValue(card.key) !== null) {
+              {{ getKpiValue(card.key) | number:'1.0-1' }}{{ card.unit ?? '' }}
+            } @else {
+              <span class="kpi-null">—</span>
+            }
+          </div>
+          <div class="kpi-label">{{ card.label }}</div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
+</div>
+
+<!-- =========================================================================
+  Charts grid – row 1: Syllabus completion + Understanding donut
+========================================================================== -->
+<div class="chart-row">
+  <!-- Syllabus completion bar -->
+  <mat-card class="chart-card chart-wide">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon class="chart-title-icon">bar_chart</mat-icon>
+        Syllabus Completion
+      </mat-card-title>
+      <mat-card-subtitle>
+        Average: <strong>{{ syllabusAvgPct | number:'1.0-1' }}%</strong>
+        across {{ syllabusItems.length }} plans
+      </mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      @if (syllabusItems.length > 0) {
+        <apx-chart
+          [series]="syllabusChart.series"
+          [chart]="syllabusChart.chart"
+          [xaxis]="syllabusChart.xaxis"
+          [yaxis]="syllabusChart.yaxis"
+          [plotOptions]="syllabusChart.plotOptions"
+          [dataLabels]="syllabusChart.dataLabels"
+          [fill]="syllabusChart.fill"
+          [colors]="syllabusChart.colors"
+          [tooltip]="syllabusChart.tooltip">
+        </apx-chart>
+      } @else {
+        <div class="empty-chart">
+          <mat-icon>analytics</mat-icon>
+          <span>No lesson plan data available</span>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Understanding donut -->
+  <mat-card class="chart-card chart-narrow">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon class="chart-title-icon">psychology</mat-icon>
+        Student Understanding
+      </mat-card-title>
+      @if (understanding) {
+        <mat-card-subtitle>Avg score: {{ understanding.avg_score | number:'1.2-2' }} / 4</mat-card-subtitle>
+      }
+    </mat-card-header>
+    <mat-card-content>
+      @if (understanding && understanding.total > 0) {
+        <apx-chart
+          [series]="understandingChart.series"
+          [chart]="understandingChart.chart"
+          [labels]="understandingChart.labels"
+          [colors]="understandingChart.colors"
+          [legend]="understandingChart.legend"
+          [dataLabels]="understandingChart.dataLabels"
+          [plotOptions]="understandingChart.plotOptions"
+          [tooltip]="understandingChart.tooltip">
+        </apx-chart>
+        <div class="understanding-legend">
+          <div class="legend-item">
+            <span class="legend-dot" [style.background]="understandingColors['excellent']"></span>
+            Excellent — {{ understanding.excellent_pct | number:'1.0-0' }}%
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot" [style.background]="understandingColors['good']"></span>
+            Good — {{ understanding.good_pct | number:'1.0-0' }}%
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot" [style.background]="understandingColors['average']"></span>
+            Average — {{ understanding.average_pct | number:'1.0-0' }}%
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot" [style.background]="understandingColors['poor']"></span>
+            Poor — {{ understanding.poor_pct | number:'1.0-0' }}%
+          </div>
+        </div>
+      } @else {
+        <div class="empty-chart">
+          <mat-icon>psychology</mat-icon>
+          <span>No understanding data recorded</span>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>
+
+<!-- =========================================================================
+  Charts grid – row 2: Faculty + Subject comparison
+========================================================================== -->
+<div class="chart-row">
+  <!-- Faculty comparison -->
+  <mat-card class="chart-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon class="chart-title-icon">people</mat-icon>
+        Faculty Comparison
+      </mat-card-title>
+      <mat-card-subtitle>Completion % by faculty member</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      @if (facultyItems.length > 0) {
+        <apx-chart
+          [series]="facultyChart.series"
+          [chart]="facultyChart.chart"
+          [xaxis]="facultyChart.xaxis"
+          [yaxis]="facultyChart.yaxis"
+          [plotOptions]="facultyChart.plotOptions"
+          [dataLabels]="facultyChart.dataLabels"
+          [colors]="facultyChart.colors"
+          [tooltip]="facultyChart.tooltip">
+        </apx-chart>
+      } @else {
+        <div class="empty-chart">
+          <mat-icon>people</mat-icon>
+          <span>No faculty data available</span>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Subject comparison -->
+  <mat-card class="chart-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon class="chart-title-icon">subject</mat-icon>
+        Subject Completion
+      </mat-card-title>
+      <mat-card-subtitle>Average completion % per subject</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      @if (subjectItems.length > 0) {
+        <apx-chart
+          [series]="subjectChart.series"
+          [chart]="subjectChart.chart"
+          [xaxis]="subjectChart.xaxis"
+          [yaxis]="subjectChart.yaxis"
+          [plotOptions]="subjectChart.plotOptions"
+          [dataLabels]="subjectChart.dataLabels"
+          [colors]="subjectChart.colors">
+        </apx-chart>
+      } @else {
+        <div class="empty-chart">
+          <mat-icon>subject</mat-icon>
+          <span>No subject data available</span>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>
+
+<!-- =========================================================================
+  Charts grid – row 3: Teaching methods + Completion trend
+========================================================================== -->
+<div class="chart-row">
+  <!-- Teaching method effectiveness -->
+  <mat-card class="chart-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon class="chart-title-icon">school</mat-icon>
+        Teaching Method Effectiveness
+      </mat-card-title>
+      <mat-card-subtitle>Composite score (0–100)</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      @if (teachingItems.length > 0) {
+        <apx-chart
+          [series]="teachingChart.series"
+          [chart]="teachingChart.chart"
+          [xaxis]="teachingChart.xaxis"
+          [yaxis]="teachingChart.yaxis"
+          [plotOptions]="teachingChart.plotOptions"
+          [dataLabels]="teachingChart.dataLabels"
+          [colors]="teachingChart.colors">
+        </apx-chart>
+      } @else {
+        <div class="empty-chart">
+          <mat-icon>school</mat-icon>
+          <span>No teaching method data recorded</span>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Completion trend -->
+  <mat-card class="chart-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon class="chart-title-icon">trending_up</mat-icon>
+        Completion Trend
+      </mat-card-title>
+      <mat-card-subtitle>Cumulative topics completed over last 30 days</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      @if (trendPoints.length > 0) {
+        <apx-chart
+          [series]="trendChart.series"
+          [chart]="trendChart.chart"
+          [xaxis]="trendChart.xaxis"
+          [yaxis]="trendChart.yaxis"
+          [stroke]="trendChart.stroke"
+          [fill]="trendChart.fill"
+          [dataLabels]="trendChart.dataLabels"
+          [grid]="trendChart.grid"
+          [tooltip]="trendChart.tooltip"
+          [colors]="trendChart.colors">
+        </apx-chart>
+      } @else {
+        <div class="empty-chart">
+          <mat-icon>trending_up</mat-icon>
+          <span>No trend data for this period</span>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>
+
+<!-- =========================================================================
+  Risk scores list
+========================================================================== -->
+<mat-card class="full-card">
+  <mat-card-header>
+    <mat-card-title>
+      <mat-icon class="chart-title-icon">warning</mat-icon>
+      Completion Risk Scores
+    </mat-card-title>
+    <mat-card-subtitle>
+      Top at-risk lesson plans — sorted by risk score (high to low)
+    </mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    @if (riskItems.length > 0) {
+      <div class="risk-list">
+        @for (item of riskItems; track item.lesson_plan_id) {
+          <div class="risk-row" [class]="'risk-row-' + item.risk_level">
+            <div class="risk-info">
+              <div class="risk-title">{{ item.title }}</div>
+              <div class="risk-sub">{{ item.subject_name }}</div>
+              <div class="risk-rec">{{ item.recommendation }}</div>
+            </div>
+            <div class="risk-metrics">
+              <div class="risk-pct">{{ item.completion_pct | number:'1.0-0' }}%</div>
+              <div class="risk-pct-label">Completed</div>
+            </div>
+            <div class="risk-bar-wrap">
+              <mat-progress-bar
+                mode="determinate"
+                [value]="item.risk_score"
+                [color]="item.risk_level === 'critical' || item.risk_level === 'high' ? 'warn' : 'primary'">
+              </mat-progress-bar>
+              <div class="risk-score-label">Risk: {{ item.risk_score | number:'1.0-0' }}</div>
+            </div>
+            <span class="risk-badge" [class]="getRiskClass(item.risk_level)">{{ item.risk_level }}</span>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="empty-chart">
+        <mat-icon>check_circle</mat-icon>
+        <span>No risk data available</span>
+      </div>
+    }
+  </mat-card-content>
+</mat-card>
+
+<!-- =========================================================================
+  Delayed topics table
+========================================================================== -->
+<mat-card class="full-card">
+  <mat-card-header>
+    <mat-card-title>
+      <mat-icon class="chart-title-icon">schedule</mat-icon>
+      Delayed Topics
+      @if (delayedItems.length > 0) {
+        <mat-chip class="delayed-badge" color="warn">{{ delayedItems.length }}</mat-chip>
+      }
+    </mat-card-title>
+    <mat-card-subtitle>Topics past their planned date that are not yet completed</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    @if (delayedItems.length > 0) {
+      <div class="table-container">
+        <table mat-table [dataSource]="delayedItems" matSort class="delayed-table">
+
+          <ng-container matColumnDef="topic_title">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Topic</th>
+            <td mat-cell *matCellDef="let row">
+              <div class="topic-cell">
+                <span class="topic-name">{{ row.topic_title }}</span>
+                <span class="chapter-name">{{ row.chapter_title }}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="subject_name">
+            <th mat-header-cell *matHeaderCellDef>Subject</th>
+            <td mat-cell *matCellDef="let row">{{ row.subject_name }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="teacher_name">
+            <th mat-header-cell *matHeaderCellDef>Faculty</th>
+            <td mat-cell *matCellDef="let row">{{ row.teacher_name }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="planned_date">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Planned Date</th>
+            <td mat-cell *matCellDef="let row">
+              {{ row.planned_date ? (row.planned_date | date:'dd MMM yyyy') : '—' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="days_overdue">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Days Overdue</th>
+            <td mat-cell *matCellDef="let row">
+              <span class="overdue-chip" [class.overdue-severe]="row.days_overdue > 14">
+                {{ row.days_overdue }} day{{ row.days_overdue !== 1 ? 's' : '' }}
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let row">
+              <span class="status-chip status-{{ row.status }}">{{ row.status | titlecase }}</span>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="delayedCols; sticky: true"></tr>
+          <tr mat-row *matRowDef="let row; columns: delayedCols;"></tr>
+        </table>
+      </div>
+    } @else {
+      <div class="empty-chart">
+        <mat-icon>check_circle</mat-icon>
+        <span>No delayed topics detected</span>
+      </div>
+    }
+  </mat-card-content>
+</mat-card>

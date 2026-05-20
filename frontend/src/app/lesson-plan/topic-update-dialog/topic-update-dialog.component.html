@@ -1,0 +1,104 @@
+<div class="dialog-header">
+  <h2 mat-dialog-title>{{ isUpdate ? 'Update Progress' : 'Record Progress' }}</h2>
+  <div class="topic-context">
+    <span class="chapter-tag">{{ data.chapter.title }}</span>
+    <span class="topic-name">{{ data.topic.title }}</span>
+  </div>
+</div>
+
+<mat-dialog-content>
+  <form [formGroup]="form" novalidate class="update-form">
+
+    <!-- Status + Completion -->
+    <div class="section-title">Status &amp; Completion</div>
+    <div class="status-completion-row">
+      <mat-form-field appearance="outline" class="status-field">
+        <mat-label>Status</mat-label>
+        <mat-select formControlName="status">
+          @for (s of topicStatuses; track s.value) {
+            <mat-option [value]="s.value">
+              <app-topic-status-chip [status]="s.value" />
+            </mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <div class="completion-block">
+        <div class="completion-label">
+          Completion: <strong>{{ currentPct }}%</strong>
+        </div>
+        <mat-slider min="0" max="100" step="5" class="completion-slider">
+          <input matSliderThumb formControlName="completion_percentage" />
+        </mat-slider>
+        <div class="slider-ticks">
+          <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+        </div>
+      </div>
+    </div>
+
+    <mat-divider class="section-divider" />
+
+    <!-- Teaching Details -->
+    <div class="section-title">Teaching Details</div>
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="flex-1">
+        <mat-label>Teaching Method</mat-label>
+        <mat-select formControlName="teaching_method">
+          <mat-option value="">-- Select --</mat-option>
+          @for (m of teachingMethods; track m.value) {
+            <mat-option [value]="m.value">
+              <mat-icon class="method-icon">{{ m.icon }}</mat-icon>
+              {{ m.label }}
+            </mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="flex-1">
+        <mat-label>Actual Date</mat-label>
+        <input matInput type="date" formControlName="actual_date" />
+      </mat-form-field>
+    </div>
+
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="flex-1">
+        <mat-label>Duration Taken (hours)</mat-label>
+        <input matInput type="number" formControlName="duration_taken" placeholder="e.g. 1.5" step="0.25" />
+        <mat-hint>Actual hours spent</mat-hint>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="flex-1">
+        <mat-label>Student Understanding</mat-label>
+        <mat-select formControlName="student_understanding_level">
+          <mat-option value="">-- Select --</mat-option>
+          @for (u of understandingLevels; track u.value) {
+            <mat-option [value]="u.value">{{ u.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <mat-divider class="section-divider" />
+
+    <!-- Remarks & Issues -->
+    <div class="section-title">Remarks &amp; Issues</div>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Remarks</mat-label>
+      <textarea matInput formControlName="remarks" rows="2" placeholder="Any observations or notes about this topic..."></textarea>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Issues / Challenges</mat-label>
+      <textarea matInput formControlName="issues" rows="2" placeholder="Any difficulties or challenges faced..."></textarea>
+      <mat-hint>Will be flagged for AI analysis</mat-hint>
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close>Cancel</button>
+  <button mat-flat-button color="primary" (click)="onSubmit()" [disabled]="loading">
+    @if (loading) { <mat-spinner diameter="18" style="display:inline-block;margin-right:6px" /> }
+    {{ isUpdate ? 'Save Changes' : 'Record Progress' }}
+  </button>
+</mat-dialog-actions>

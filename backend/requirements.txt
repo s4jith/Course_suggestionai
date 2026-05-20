@@ -1,0 +1,29 @@
+# Core framework
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+
+# MongoDB async driver
+motor==3.7.0
+pymongo==4.10.1
+
+# Pydantic v2 + settings management
+pydantic==2.10.3
+pydantic-settings==2.6.1
+pydantic[email]==2.10.3
+
+# JWT
+python-jose[cryptography]==3.3.0
+
+# Password hashing
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+
+# Environment variable loading
+python-dotenv==1.0.1
+
+# Async HTTP client (used by Ollama AI engine service)
+httpx==0.28.1
+
+# ASGI server extras (already pulled by uvicorn[standard], listed for clarity)
+httptools==0.6.4
+websockets==14.1

@@ -1,0 +1,27 @@
+<mat-toolbar class="topbar">
+  <button mat-icon-button (click)="menuToggle.emit()" aria-label="Toggle menu">
+    <mat-icon>menu</mat-icon>
+  </button>
+
+  <span class="spacer"></span>
+
+  @if (authService.currentUser$ | async; as user) {
+    <button mat-button [matMenuTriggerFor]="userMenu" class="user-btn">
+      <span class="user-avatar-small">{{ user.full_name[0]?.toUpperCase() }}</span>
+      <span class="user-name-top">{{ user.full_name }}</span>
+      <mat-icon>arrow_drop_down</mat-icon>
+    </button>
+
+    <mat-menu #userMenu="matMenu">
+      <div class="menu-header" mat-menu-item disabled>
+        <strong>{{ user.full_name }}</strong>
+        <small>{{ user.email }}</small>
+      </div>
+      <mat-divider />
+      <button mat-menu-item (click)="authService.logout()">
+        <mat-icon>logout</mat-icon>
+        <span>Sign Out</span>
+      </button>
+    </mat-menu>
+  }
+</mat-toolbar>

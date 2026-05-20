@@ -1,0 +1,17 @@
+<mat-sidenav-container class="sidenav-container">
+  <mat-sidenav
+    class="sidenav"
+    [mode]="isMobile() ? 'over' : 'side'"
+    [opened]="!isMobile() && sidenavOpened()"
+    fixedInViewport
+  >
+    <app-sidebar />
+  </mat-sidenav>
+
+  <mat-sidenav-content class="main-content">
+    <app-topbar (menuToggle)="toggleSidenav()" />
+    <main class="content-area">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

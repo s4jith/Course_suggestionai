@@ -1,0 +1,52 @@
+<app-page-header title="Lesson Plans" subtitle="Manage and review your academic lesson plans">
+  <mat-form-field appearance="outline" class="filter-field">
+    <mat-label>Status</mat-label>
+    <mat-select [formControl]="statusFilter">
+      <mat-option value="">All</mat-option>
+      <mat-option value="draft">Draft</mat-option>
+      <mat-option value="active">Active</mat-option>
+      <mat-option value="completed">Completed</mat-option>
+      <mat-option value="archived">Archived</mat-option>
+    </mat-select>
+  </mat-form-field>
+  <button mat-flat-button color="primary" routerLink="/lesson-plans/new">
+    <mat-icon>add</mat-icon> New Plan
+  </button>
+</app-page-header>
+
+@if (loading) {
+  <div class="loading-center">
+    <mat-spinner diameter="48" />
+  </div>
+} @else if (plans.length === 0) {
+  <div class="empty-state">
+    <mat-icon>assignment_outlined</mat-icon>
+    <h3>No lesson plans found</h3>
+    <p>Create your first lesson plan to get started.</p>
+  </div>
+} @else {
+  <div class="plans-grid">
+    @for (plan of plans; track plan.id) {
+      <mat-card class="plan-card" [routerLink]="['/lesson-plans', plan.id]">
+        <mat-card-header>
+          <mat-card-title>{{ plan.title }}</mat-card-title>
+          <mat-card-subtitle>{{ plan.academic_year }} · Semester {{ plan.semester }}</mat-card-subtitle>
+          <span class="plan-status {{ statusColor(plan.status) }}">{{ plan.status | titlecase }}</span>
+        </mat-card-header>
+        <mat-card-actions align="end">
+          <a mat-button color="primary" [routerLink]="['/lesson-plans', plan.id]">
+            <mat-icon>arrow_forward</mat-icon> View
+          </a>
+        </mat-card-actions>
+      </mat-card>
+    }
+  </div>
+
+  <mat-paginator
+    [length]="total"
+    [pageSize]="pageSize"
+    [pageSizeOptions]="[6, 12, 24]"
+    (page)="onPage($event)"
+    showFirstLastButtons
+  />
+}

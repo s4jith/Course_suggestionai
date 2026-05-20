@@ -1,0 +1,52 @@
+@use '@angular/material' as mat;
+
+html {
+  @include mat.theme((
+    color: (
+      primary: mat.$violet-palette,
+      tertiary: mat.$cyan-palette,
+      theme-type: light,
+    ),
+    typography: Roboto,
+    density: 0,
+  ));
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: #f1f5f9;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Snackbar theming */
+.snack-success .mdc-snackbar__surface {
+  background: #166534 !important;
+  color: white !important;
+}
+.snack-error .mdc-snackbar__surface {
+  background: #991b1b !important;
+  color: white !important;
+}
+.snack-warning .mdc-snackbar__surface {
+  background: #92400e !important;
+  color: white !important;
+}
+.snack-info .mdc-snackbar__surface {
+  background: #1d4ed8 !important;
+  color: white !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* Utility */
+.spacer { flex: 1 1 auto; }
