@@ -1,12 +1,3 @@
-"""
-Data Extractor – transforms raw MongoDB documents into a structured
-`PlanContext` snapshot that both the rule engine and LLM prompt builder
-can consume.
-
-The key output is `PlanContext` — a flat, analytics-friendly view of a
-lesson plan's current delivery state, derived from a `LessonPlanDocument`
-and its associated `TopicProgressDocument` records.
-"""
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -20,11 +11,6 @@ from app.models.lesson_plan import (
     UnderstandingLevel,
 )
 
-
-# ---------------------------------------------------------------------------
-# Understanding level → numeric score mapping
-# ---------------------------------------------------------------------------
-
 _UNDERSTANDING_SCORE: Dict[UnderstandingLevel, int] = {
     UnderstandingLevel.POOR: 0,
     UnderstandingLevel.AVERAGE: 1,
@@ -32,14 +18,8 @@ _UNDERSTANDING_SCORE: Dict[UnderstandingLevel, int] = {
     UnderstandingLevel.EXCELLENT: 3,
 }
 
-
-# ---------------------------------------------------------------------------
-# TopicSnapshot – flat view of a single topic
-# ---------------------------------------------------------------------------
-
 @dataclass
 class TopicSnapshot:
-    """Flat view of one topic and its current progress state."""
 
     lesson_plan_id: str
     chapter_id: str
@@ -50,7 +30,6 @@ class TopicSnapshot:
     planned_hours: float
     planned_date: Optional[datetime]
 
-    # Progress fields — None means the topic has not been started yet
     progress_id: Optional[str] = None
     status: TopicStatus = TopicStatus.PENDING
     completion_percentage: float = 0.0
@@ -61,13 +40,8 @@ class TopicSnapshot:
     remarks: Optional[str] = None
     issues: Optional[str] = None
 
-    # ------------------------------------------------------------------
-    # Computed properties
-    # ------------------------------------------------------------------
-
     @property
     def is_delayed(self) -> bool:
-        """True if the planned date has passed but the topic is not completed."""
         if self.planned_date is None or self.status == TopicStatus.COMPLETED:
             return False
         now = datetime.now(tz=timezone.utc)
@@ -78,7 +52,6 @@ class TopicSnapshot:
 
     @property
     def days_overdue(self) -> int:
-        """Positive integer: how many days past the planned date this topic is."""
         if not self.is_delayed or self.planned_date is None:
             return 0
         now = datetime.now(tz=timezone.utc)
@@ -89,27 +62,12 @@ class TopicSnapshot:
 
     @property
     def understanding_score(self) -> int:
-        """
-        Numeric score for comprehension level.
-        Returns -1 if no understanding level has been recorded.
-        """
         if self.understanding_level is None:
             return -1
         return _UNDERSTANDING_SCORE.get(self.understanding_level, -1)
 
-
-# ---------------------------------------------------------------------------
-# PlanContext – full analytical context for one lesson plan
-# ---------------------------------------------------------------------------
-
 @dataclass
 class PlanContext:
-    """
-    Complete analytical context for one lesson plan.
-
-    Consumed by the rule engine, risk analyzer, and prompt templates.
-    Built by `build_plan_context()` — never constructed manually.
-    """
 
     plan_id: str
     subject_name: str
@@ -121,7 +79,6 @@ class PlanContext:
 
     topics: List[TopicSnapshot] = field(default_factory=list)
 
-    # --- Derived aggregates ---
     completed_topics: int = 0
     in_progress_topics: int = 0
     pending_topics: int = 0
@@ -131,37 +88,17 @@ class PlanContext:
     completion_percentage: float = 0.0
     avg_understanding_score: float = 0.0
 
-    # method str → average understanding score (0–3)
     method_effectiveness: Dict[str, float] = field(default_factory=dict)
-    # method str → number of uses
     method_usage_count: Dict[str, int] = field(default_factory=dict)
 
-    # First and last recorded teaching activity
     first_activity_date: Optional[datetime] = None
     last_activity_date: Optional[datetime] = None
-
-
-# ---------------------------------------------------------------------------
-# Builder function
-# ---------------------------------------------------------------------------
 
 def build_plan_context(
     plan: LessonPlanDocument,
     subject_name: str,
     progress_records: List[TopicProgressDocument],
 ) -> PlanContext:
-    """
-    Build a `PlanContext` from a lesson plan document and its progress records.
-
-    Args:
-        plan:             The LessonPlanDocument from MongoDB.
-        subject_name:     Human-readable subject name.
-        progress_records: All TopicProgressDocument records for this plan.
-
-    Returns:
-        A fully populated PlanContext ready for rule / LLM processing.
-    """
-    # Index progress records by topic_id for O(1) lookup
     progress_index: Dict[str, TopicProgressDocument] = {
         p.topic_id: p for p in progress_records
     }
@@ -198,23 +135,19 @@ def build_plan_context(
             total_planned_hours += topic.planned_hours
             topic_snapshots.append(snap)
 
-    # --- Status counts ---
     completed = [t for t in topic_snapshots if t.status == TopicStatus.COMPLETED]
     in_progress = [t for t in topic_snapshots if t.status == TopicStatus.IN_PROGRESS]
     pending = [t for t in topic_snapshots if t.status == TopicStatus.PENDING]
     skipped = [t for t in topic_snapshots if t.status == TopicStatus.SKIPPED]
     delayed = [t for t in topic_snapshots if t.is_delayed]
 
-    # --- Hours delivered ---
     hours_delivered = sum(
         t.duration_taken for t in topic_snapshots if t.duration_taken is not None
     )
 
-    # --- Average understanding ---
     scored = [t.understanding_score for t in topic_snapshots if t.understanding_score >= 0]
     avg_understanding = sum(scored) / len(scored) if scored else 0.0
 
-    # --- Method effectiveness ---
     method_scores: Dict[str, List[int]] = {}
     method_counts: Dict[str, int] = {}
     for t in topic_snapshots:
@@ -231,7 +164,6 @@ def build_plan_context(
         k: round(sum(v) / len(v), 3) for k, v in method_scores.items()
     }
 
-    # --- Activity date range ---
     activity_dates = [t.actual_date for t in topic_snapshots if t.actual_date is not None]
     first_activity = min(activity_dates) if activity_dates else None
     last_activity = max(activity_dates) if activity_dates else None

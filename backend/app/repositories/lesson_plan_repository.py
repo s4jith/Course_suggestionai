@@ -1,10 +1,3 @@
-"""
-Lesson Plan repository – all MongoDB I/O for the `lesson_plans` collection.
-
-The collection stores the full chapter → topic → subtopic hierarchy as
-embedded arrays, so most read operations are single-document fetches.
-Array mutations use MongoDB's `$push`, `$set`, and `arrayFilters` operators.
-"""
 
 from datetime import datetime
 from typing import Optional
@@ -20,9 +13,7 @@ from app.models.lesson_plan import (
     TopicDocument,
 )
 
-
 class LessonPlanRepository:
-    """Async repository for the `lesson_plans` collection."""
 
     COLLECTION = "lesson_plans"
 
@@ -32,10 +23,6 @@ class LessonPlanRepository:
     @staticmethod
     def _to_model(doc: dict) -> LessonPlanDocument:
         return LessonPlanDocument(**doc)
-
-    # ------------------------------------------------------------------
-    # Read
-    # ------------------------------------------------------------------
 
     async def find_by_id(self, plan_id: str) -> Optional[LessonPlanDocument]:
         if not ObjectId.is_valid(plan_id):
@@ -53,10 +40,6 @@ class LessonPlanRepository:
         skip: int = 0,
         limit: int = 20,
     ) -> list[LessonPlanDocument]:
-        """
-        Return lesson plans with optional multi-field filters.
-        Results are sorted newest-first.
-        """
         query: dict = {}
         if teacher_id:
             query["teacher_id"] = teacher_id
@@ -94,19 +77,13 @@ class LessonPlanRepository:
             query["semester"] = semester
         return await self._col.count_documents(query)
 
-    # ------------------------------------------------------------------
-    # Write – plan level
-    # ------------------------------------------------------------------
-
     async def create(self, doc: LessonPlanDocument) -> LessonPlanDocument:
-        """Insert a new lesson plan and return it with its new _id."""
         payload = doc.model_dump(by_alias=True, exclude={"id"})
         result = await self._col.insert_one(payload)
         doc.id = result.inserted_id
         return doc
 
     async def update_plan(self, plan_id: str, updates: dict) -> Optional[LessonPlanDocument]:
-        """Apply a partial update to plan-level fields."""
         if not ObjectId.is_valid(plan_id):
             return None
         updates["updated_at"] = datetime.utcnow()
@@ -117,14 +94,9 @@ class LessonPlanRepository:
         )
         return self._to_model(result) if result else None
 
-    # ------------------------------------------------------------------
-    # Write – chapter level
-    # ------------------------------------------------------------------
-
     async def add_chapter(
         self, plan_id: str, chapter: ChapterDocument, updated_by: str
     ) -> Optional[LessonPlanDocument]:
-        """Append a chapter to the lesson plan's chapters array."""
         if not ObjectId.is_valid(plan_id):
             return None
         chapter_dict = chapter.model_dump()
@@ -141,7 +113,6 @@ class LessonPlanRepository:
     async def update_chapter(
         self, plan_id: str, chapter_id: str, updates: dict, updated_by: str
     ) -> Optional[LessonPlanDocument]:
-        """Update scalar fields of a specific chapter using arrayFilters."""
         if not ObjectId.is_valid(plan_id):
             return None
         set_fields = {f"chapters.$[ch].{k}": v for k, v in updates.items()}
@@ -155,14 +126,9 @@ class LessonPlanRepository:
         )
         return self._to_model(result) if result else None
 
-    # ------------------------------------------------------------------
-    # Write – topic level
-    # ------------------------------------------------------------------
-
     async def add_topic(
         self, plan_id: str, chapter_id: str, topic: TopicDocument, updated_by: str
     ) -> Optional[LessonPlanDocument]:
-        """Append a topic to a chapter's topics array using arrayFilters."""
         if not ObjectId.is_valid(plan_id):
             return None
         topic_dict = topic.model_dump()
@@ -185,7 +151,6 @@ class LessonPlanRepository:
         updates: dict,
         updated_by: str,
     ) -> Optional[LessonPlanDocument]:
-        """Update scalar fields of a specific topic using nested arrayFilters."""
         if not ObjectId.is_valid(plan_id):
             return None
         set_fields = {f"chapters.$[ch].topics.$[tp].{k}": v for k, v in updates.items()}
@@ -202,10 +167,6 @@ class LessonPlanRepository:
         )
         return self._to_model(result) if result else None
 
-    # ------------------------------------------------------------------
-    # Write – subtopic level
-    # ------------------------------------------------------------------
-
     async def add_subtopic(
         self,
         plan_id: str,
@@ -214,7 +175,6 @@ class LessonPlanRepository:
         subtopic: SubtopicDocument,
         updated_by: str,
     ) -> Optional[LessonPlanDocument]:
-        """Append a subtopic to a topic's subtopics array."""
         if not ObjectId.is_valid(plan_id):
             return None
         subtopic_dict = subtopic.model_dump()

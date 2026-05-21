@@ -1,8 +1,3 @@
-"""
-User management routes – admin-only operations on user accounts.
-
-All routes live under the /api/v1/users prefix (configured in main.py).
-"""
 
 from typing import Annotated, Optional
 
@@ -19,16 +14,10 @@ from app.schemas.user import UserResponse, UserUpdate
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
-
 def get_user_repo(
     db: Annotated[AsyncIOMotorDatabase, Depends(get_database)],
 ) -> UserRepository:
     return UserRepository(db)
-
-
-# ---------------------------------------------------------------------------
-# Admin endpoints
-# ---------------------------------------------------------------------------
 
 @router.get(
     "/",
@@ -43,14 +32,10 @@ async def list_users(
     _: Annotated[UserDocument, Depends(require_admin)] = None,
     repo: Annotated[UserRepository, Depends(get_user_repo)] = None,
 ):
-    """
-    **Admin only** – Paginated list of all user accounts.
-    Optionally filter by `role` (teacher | admin).
-    """
     skip = (page - 1) * page_size
     users = await repo.list_users(role=role, skip=skip, limit=page_size)
     total = await repo.count_users(role=role)
-    total_pages = -(-total // page_size)  # Ceiling division
+    total_pages = -(-total // page_size)
 
     return PaginatedResponse(
         data=[
@@ -72,7 +57,6 @@ async def list_users(
         total_pages=total_pages,
     )
 
-
 @router.get(
     "/{user_id}",
     response_model=SuccessResponse[UserResponse],
@@ -84,7 +68,6 @@ async def get_user(
     _: Annotated[UserDocument, Depends(require_admin)] = None,
     repo: Annotated[UserRepository, Depends(get_user_repo)] = None,
 ):
-    """**Admin only** – Retrieve a user by their MongoDB ObjectId string."""
     user = await repo.find_by_id(user_id)
     if user is None:
         raise NotFoundException("User")
@@ -103,7 +86,6 @@ async def get_user(
         message="User retrieved successfully.",
     )
 
-
 @router.delete(
     "/{user_id}/deactivate",
     response_model=SuccessResponse,
@@ -115,16 +97,10 @@ async def deactivate_user(
     _: Annotated[UserDocument, Depends(require_admin)] = None,
     repo: Annotated[UserRepository, Depends(get_user_repo)] = None,
 ):
-    """**Admin only** – Soft-delete (deactivate) a user account."""
     success = await repo.deactivate(user_id)
     if not success:
         raise NotFoundException("User")
     return success_response(message="User account deactivated successfully.")
-
-
-# ---------------------------------------------------------------------------
-# Teacher / self-service endpoints
-# ---------------------------------------------------------------------------
 
 @router.patch(
     "/me",
@@ -137,11 +113,6 @@ async def update_my_profile(
     current_user: Annotated[UserDocument, Depends(require_teacher)],
     repo: Annotated[UserRepository, Depends(get_user_repo)] = None,
 ):
-    """
-    Update own profile fields (full_name, email).
-    Teachers and Admins can access this endpoint.
-    """
-    # Only include non-None fields in the update payload
     updates = payload.model_dump(exclude_none=True)
     if not updates:
         return success_response(

@@ -1,13 +1,10 @@
-// Analytics Dashboard styles
+
 
 :host {
   display: block;
   padding-bottom: 40px;
 }
 
-// ============================================================
-// Filter bar
-// ============================================================
 .filter-bar {
   display: flex;
   align-items: flex-start;
@@ -44,9 +41,6 @@
   }
 }
 
-// ============================================================
-// Error banner
-// ============================================================
 .error-banner {
   display: flex;
   align-items: center;
@@ -60,9 +54,6 @@
   font-size: 13px;
 }
 
-// ============================================================
-// KPI grid
-// ============================================================
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -130,9 +121,6 @@
   }
 }
 
-// ============================================================
-// Chart rows
-// ============================================================
 .chart-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -170,7 +158,7 @@
   }
 
   &.chart-wide {
-    // spans in 2/3 in larger screens when used next to narrow
+
   }
 }
 
@@ -189,9 +177,6 @@
   height: 20px !important;
 }
 
-// ============================================================
-// Full-width cards
-// ============================================================
 .full-card {
   border-radius: 10px !important;
   margin-bottom: 20px;
@@ -210,9 +195,6 @@
   }
 }
 
-// ============================================================
-// Empty chart state
-// ============================================================
 .empty-chart {
   display: flex;
   flex-direction: column;
@@ -231,9 +213,6 @@
   }
 }
 
-// ============================================================
-// Understanding legend
-// ============================================================
 .understanding-legend {
   display: flex;
   flex-direction: column;
@@ -256,9 +235,6 @@
   }
 }
 
-// ============================================================
-// Risk list
-// ============================================================
 .risk-list {
   display: flex;
   flex-direction: column;
@@ -356,9 +332,6 @@
   font-size: 11px;
 }
 
-// ============================================================
-// Delayed topics table
-// ============================================================
 .table-container {
   overflow-x: auto;
   max-height: 400px;

@@ -1,6 +1,3 @@
-"""
-Subject repository – all MongoDB I/O for the `subjects` collection.
-"""
 
 from datetime import datetime
 from typing import Optional
@@ -10,26 +7,16 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.models.lesson_plan import SubjectDocument
 
-
 class SubjectRepository:
-    """Async repository for the `subjects` collection."""
 
     COLLECTION = "subjects"
 
     def __init__(self, db: AsyncIOMotorDatabase) -> None:
         self._col = db[self.COLLECTION]
 
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
-
     @staticmethod
     def _to_model(doc: dict) -> SubjectDocument:
         return SubjectDocument(**doc)
-
-    # ------------------------------------------------------------------
-    # Read
-    # ------------------------------------------------------------------
 
     async def find_by_id(self, subject_id: str) -> Optional[SubjectDocument]:
         if not ObjectId.is_valid(subject_id):
@@ -79,19 +66,13 @@ class SubjectRepository:
             query["is_active"] = is_active
         return await self._col.count_documents(query)
 
-    # ------------------------------------------------------------------
-    # Write
-    # ------------------------------------------------------------------
-
     async def create(self, doc: SubjectDocument) -> SubjectDocument:
-        """Insert a new subject and return the document with its new _id."""
         payload = doc.model_dump(by_alias=True, exclude={"id"})
         result = await self._col.insert_one(payload)
         doc.id = result.inserted_id
         return doc
 
     async def update(self, subject_id: str, updates: dict) -> Optional[SubjectDocument]:
-        """Apply a partial update and return the refreshed document."""
         if not ObjectId.is_valid(subject_id):
             return None
         updates["updated_at"] = datetime.utcnow()

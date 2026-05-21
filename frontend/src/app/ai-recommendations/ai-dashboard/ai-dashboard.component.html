@@ -1,6 +1,4 @@
-﻿<!-- =========================================================================
-  AI Status Bar
-========================================================================== -->
+
 <div class="ai-status-bar">
   <div class="status-pill" [class]="healthStatusClass">
     <mat-icon>{{ healthStatusIcon }}</mat-icon>
@@ -27,9 +25,6 @@
   </div>
 </div>
 
-<!-- =========================================================================
-  Page Header + Plan Selector
-========================================================================== -->
 <app-page-header
   title="AI Recommendations"
   subtitle="Powered by Mistral 7B via Ollama — intelligent teaching insights">
@@ -48,9 +43,6 @@
   </button>
 </app-page-header>
 
-<!-- =========================================================================
-  Loading skeleton animation
-========================================================================== -->
 @if (loading()) {
   <div class="skeleton-wrap">
     <div class="skeleton-row">
@@ -71,7 +63,6 @@
   </div>
 }
 
-<!-- Empty state -->
 @if (!loading() && !aiData && !loadError) {
   <div class="empty-state">
     <div class="empty-icon-wrap"><mat-icon>auto_awesome</mat-icon></div>
@@ -86,7 +77,6 @@
   </div>
 }
 
-<!-- Error state -->
 @if (!loading() && loadError) {
   <div class="error-state">
     <mat-icon>error_outline</mat-icon>
@@ -95,12 +85,9 @@
   </div>
 }
 
-<!-- =========================================================================
-  Main Dashboard Content
-========================================================================== -->
 @if (!loading() && aiData) {
 
-  <!-- Fallback / Online Banner -->
+  
   @if (aiData.fallback_mode) {
     <div class="mode-banner mode-fallback">
       <mat-icon>rule</mat-icon>
@@ -118,7 +105,7 @@
     </div>
   }
 
-  <!-- Delay Warnings Strip -->
+  
   @if (delayWarnings.length > 0) {
     <div class="delay-strip">
       <mat-icon class="delay-icon">warning_amber</mat-icon>
@@ -129,10 +116,10 @@
     </div>
   }
 
-  <!-- Row 1: Risk + Next Topic -->
+  
   <div class="section-grid two-col">
 
-    <!-- Risk Assessment Card -->
+    
     <mat-card class="risk-card" [class]="'risk-border-' + aiData.risk_assessment.risk_level">
       <mat-card-header>
         <mat-card-title><mat-icon>monitor_heart</mat-icon> Risk Assessment</mat-card-title>
@@ -238,7 +225,7 @@
       </mat-card-content>
     </mat-card>
 
-    <!-- Next Topic Card -->
+    
     @if (aiData.next_topic) {
       <mat-card class="next-topic-card">
         <mat-card-header>
@@ -305,7 +292,7 @@
     }
   </div>
 
-  <!-- AI Summary -->
+  
   @if (aiData.ai_summary || aiData.llm_insights?.summary) {
     <mat-card class="ai-summary-card">
       <mat-card-header>
@@ -340,7 +327,7 @@
                     <p>{{ aiData.llm_insights!.summary!.student_performance_insight }}</p>
                   </div>
                 }
-                @if (aiData.llm_insights!.summary!.recommendations && summary!.recommendations.length) {
+                @if (aiData.llm_insights!.summary!.recommendations && aiData.llm_insights!.summary!.recommendations.length) {
                   <div class="insight-block">
                     <div class="insight-block-title"><mat-icon>recommend</mat-icon> Recommendations</div>
                     @for (r of aiData.llm_insights!.summary!.recommendations; track r) {
@@ -362,7 +349,7 @@
     </mat-card>
   }
 
-  <!-- Weak Areas -->
+  
   @if (aiData.weak_areas.length > 0) {
     <mat-card class="weak-areas-card">
       <mat-card-header>
@@ -440,7 +427,7 @@
     </mat-card>
   }
 
-  <!-- Teaching Method Effectiveness -->
+  
   @if (aiData.method_effectiveness.length > 0) {
     <mat-card class="method-card">
       <mat-card-header>
@@ -482,7 +469,7 @@
     </mat-card>
   }
 
-  <!-- Smart Timetable -->
+  
   @if (aiData.timetable_suggestions.length > 0) {
     <mat-card class="timetable-card">
       <mat-card-header>

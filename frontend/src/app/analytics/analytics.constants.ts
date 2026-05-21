@@ -1,10 +1,7 @@
-// Analytics constants: colors, chart configs, labels.
+
 
 import { ApexPlotOptions, ApexFill, ApexDataLabels, ApexStroke } from 'ng-apexcharts';
 
-// ---------------------------------------------------------------------------
-// Risk level colours
-// ---------------------------------------------------------------------------
 export const RISK_COLORS: Record<string, string> = {
   low: '#16a34a',
   medium: '#f59e0b',
@@ -19,9 +16,6 @@ export const RISK_BG_CLASSES: Record<string, string> = {
   critical: 'risk-critical',
 };
 
-// ---------------------------------------------------------------------------
-// Understanding level colours
-// ---------------------------------------------------------------------------
 export const UNDERSTANDING_COLORS: Record<string, string> = {
   excellent: '#16a34a',
   good: '#2563eb',
@@ -36,25 +30,19 @@ export const UNDERSTANDING_LABELS: Record<string, string> = {
   poor: 'Poor',
 };
 
-// ---------------------------------------------------------------------------
-// Default ApexCharts colour palette
-// ---------------------------------------------------------------------------
 export const CHART_COLORS = [
-  '#6366f1', // indigo
-  '#0ea5e9', // sky
-  '#10b981', // emerald
-  '#f59e0b', // amber
-  '#f97316', // orange
-  '#ec4899', // pink
-  '#8b5cf6', // violet
-  '#14b8a6', // teal
-  '#ef4444', // red
-  '#84cc16', // lime
+  '#6366f1',
+  '#0ea5e9',
+  '#10b981',
+  '#f59e0b',
+  '#f97316',
+  '#ec4899',
+  '#8b5cf6',
+  '#14b8a6',
+  '#ef4444',
+  '#84cc16',
 ];
 
-// ---------------------------------------------------------------------------
-// KPI card configs
-// ---------------------------------------------------------------------------
 export interface KpiCardConfig {
   key: keyof import('../models/analytics.model').OverviewKPI;
   label: string;
@@ -118,22 +106,13 @@ export const KPI_CARDS: KpiCardConfig[] = [
   },
 ];
 
-// ---------------------------------------------------------------------------
-// Common chart toolbar config
-// ---------------------------------------------------------------------------
 export const CHART_TOOLBAR = {
   show: true,
   tools: { download: true, selection: false, zoom: false, zoomin: false, zoomout: false, pan: false, reset: false },
 };
 
-// ---------------------------------------------------------------------------
-// Semester options
-// ---------------------------------------------------------------------------
 export const SEMESTER_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8];
 
-// ---------------------------------------------------------------------------
-// Teaching method labels (mirror backend)
-// ---------------------------------------------------------------------------
 export const METHOD_LABELS: Record<string, string> = {
   theoretical: 'Theoretical',
   practical: 'Practical',

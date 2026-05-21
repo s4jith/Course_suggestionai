@@ -1,20 +1,3 @@
-"""
-Prompt Templates – structured prompt builders for all Ollama interactions.
-
-Design principles:
-  - Each builder is a plain function returning a str (no Jinja2 dependency).
-  - Every prompt embeds a JSON schema spec so Ollama knows the exact output shape.
-  - Prompts include the SYSTEM_HEADER for consistent academic context.
-  - Temperature 0.15 is recommended for deterministic structured output.
-  - All prompts instruct the model NOT to use markdown fencing.
-
-Each prompt corresponds to one analytical task:
-  next_topic_prompt       → teaching guidance for the recommended next topic
-  weak_areas_prompt       → revision strategies for low-comprehension topics
-  timetable_prompt        → schedule quality analysis and optimisation tips
-  risk_explanation_prompt → narrative risk report with immediate actions
-  summary_insights_prompt → holistic semester progress analysis
-"""
 
 import json
 from datetime import datetime, timezone
@@ -22,11 +5,6 @@ from typing import Any, Dict, List
 
 from app.ai_engine.inference.risk_analyzer import RiskReport
 from app.ai_engine.utils.data_extractor import PlanContext
-
-
-# ---------------------------------------------------------------------------
-# Shared system header
-# ---------------------------------------------------------------------------
 
 _SYSTEM_HEADER = (
     "You are an expert academic teaching assistant AI integrated into a college "
@@ -38,11 +16,6 @@ _SYSTEM_HEADER = (
     "All string values must be concise, specific, and grounded in the data provided.\n\n"
 )
 
-
-# ---------------------------------------------------------------------------
-# Helper: understanding score → label
-# ---------------------------------------------------------------------------
-
 def _understanding_label(score: float) -> str:
     if score >= 2.5:
         return "Excellent"
@@ -52,11 +25,6 @@ def _understanding_label(score: float) -> str:
         return "Average"
     return "Poor"
 
-
-# ---------------------------------------------------------------------------
-# 1. Next topic recommendation prompt
-# ---------------------------------------------------------------------------
-
 def next_topic_prompt(
     ctx: PlanContext,
     next_topic_title: str,
@@ -64,18 +32,6 @@ def next_topic_prompt(
     suggested_method: str,
     priority_score: float,
 ) -> str:
-    """
-    Build a prompt for the LLM to explain and enrich the next-topic recommendation.
-
-    Expected JSON response shape:
-    {
-      "recommendation_reason": "string",
-      "teaching_guidance": "string",
-      "preparation_tips": ["string", ...],
-      "estimated_duration_note": "string",
-      "student_engagement_tips": ["string", ...]
-    }
-    """
     pending_count = ctx.pending_topics + ctx.in_progress_topics
     understanding_label = _understanding_label(ctx.avg_understanding_score)
 
@@ -106,28 +62,10 @@ def next_topic_prompt(
         f'}}'
     )
 
-
-# ---------------------------------------------------------------------------
-# 2. Weak areas revision prompt
-# ---------------------------------------------------------------------------
-
 def weak_areas_prompt(
     ctx: PlanContext,
     weak_topic_titles: List[str],
 ) -> str:
-    """
-    Build a prompt for the LLM to suggest revision strategies for poorly
-    understood topics.
-
-    Expected JSON response shape:
-    {
-      "overall_diagnosis": "string",
-      "revision_plan": [
-        {"topic": "string", "strategy": "string", "suggested_method": "string"}
-      ],
-      "general_improvement_tips": ["string", ...]
-    }
-    """
     if weak_topic_titles:
         weak_list = "\n".join(f"  - {t}" for t in weak_topic_titles)
     else:
@@ -159,28 +97,11 @@ def weak_areas_prompt(
         f'}}'
     )
 
-
-# ---------------------------------------------------------------------------
-# 3. Timetable analysis prompt
-# ---------------------------------------------------------------------------
-
 def timetable_prompt(
     ctx: PlanContext,
     rule_timetable: List[Dict[str, Any]],
 ) -> str:
-    """
-    Build a prompt for the LLM to evaluate and optimise the rule-generated timetable.
-
-    Expected JSON response shape:
-    {
-      "schedule_insights": "string",
-      "optimizations": ["string", ...],
-      "weekly_goal": "string",
-      "risk_note": "string"
-    }
-    """
     if rule_timetable:
-        # Show first 7 slots for context, serialise dates as strings
         preview_slots = rule_timetable[:7]
         schedule_preview = json.dumps(preview_slots, indent=2, default=str)
     else:
@@ -205,26 +126,10 @@ def timetable_prompt(
         f'}}'
     )
 
-
-# ---------------------------------------------------------------------------
-# 4. Risk explanation prompt
-# ---------------------------------------------------------------------------
-
 def risk_explanation_prompt(
     ctx: PlanContext,
     risk: RiskReport,
 ) -> str:
-    """
-    Build a prompt for the LLM to generate a narrative risk report.
-
-    Expected JSON response shape:
-    {
-      "executive_summary": "string",
-      "key_concerns": ["string", ...],
-      "immediate_actions": ["string", ...],
-      "long_term_strategy": "string"
-    }
-    """
     factors_list = "\n".join(f"  - {f}" for f in risk.risk_factors)
     mitigations_list = "\n".join(f"  - {m}" for m in risk.mitigation_suggestions)
 
@@ -248,28 +153,11 @@ def risk_explanation_prompt(
         f'}}'
     )
 
-
-# ---------------------------------------------------------------------------
-# 5. Holistic summary insights prompt
-# ---------------------------------------------------------------------------
-
 def summary_insights_prompt(
     ctx: PlanContext,
     risk: RiskReport,
     forecast: dict,
 ) -> str:
-    """
-    Build a prompt for a full holistic analysis of the lesson plan's progress.
-
-    Expected JSON response shape:
-    {
-      "progress_narrative": "string",
-      "teaching_style_analysis": "string",
-      "student_performance_insight": "string",
-      "recommendations": ["string", ...],
-      "motivational_note": "string"
-    }
-    """
     understanding_label = _understanding_label(ctx.avg_understanding_score)
 
     if ctx.method_effectiveness:

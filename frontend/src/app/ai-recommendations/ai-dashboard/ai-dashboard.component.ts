@@ -32,10 +32,6 @@ import {
 } from '../../models/ai.model';
 import { LessonPlanSummary } from '../../models/lesson-plan.model';
 
-// ============================================================
-// Constants
-// ============================================================
-
 const RISK_GAUGE_COLORS: Record<string, string> = {
   low: '#16a34a',
   medium: '#f59e0b',
@@ -70,7 +66,6 @@ export class AiDashboardComponent implements OnInit, OnDestroy {
   private readonly planApi = inject(LessonPlanApiService);
   private readonly destroy$ = new Subject<void>();
 
-  // ─── State ──────────────────────────────────────────────────
   plans: LessonPlanSummary[] = [];
   selectedPlanId = new FormControl<string>('');
   aiData: AIRecommendationResponse | null = null;
@@ -82,16 +77,11 @@ export class AiDashboardComponent implements OnInit, OnDestroy {
   lastGenerated: Date | null = null;
   loadError: string | null = null;
 
-  // ─── Timetable view ─────────────────────────────────────────
   timetableByWeek: TimetableWeek[] = [];
   timetableCols = ['slot', 'date', 'topic_title', 'chapter_title', 'teaching_method', 'hours'];
 
-  // ─── Delay warnings ─────────────────────────────────────────
   delayWarnings: string[] = [];
 
-  // ─── Charts ─────────────────────────────────────────────────
-
-  // Radial risk gauge
   riskGaugeOptions: {
     series: number[];
     chart: ApexChart;
@@ -101,7 +91,6 @@ export class AiDashboardComponent implements OnInit, OnDestroy {
     colors: string[];
   } = this._buildRiskGauge(0, 'low');
 
-  // Completion progress radial (multi-ring)
   completionRadial: {
     series: number[];
     chart: ApexChart;
@@ -131,7 +120,6 @@ export class AiDashboardComponent implements OnInit, OnDestroy {
       gradientToColors: ['#ABE5A1', '#64ACFF', '#5AD8E6'], inverseColors: false, opacityFrom: 1, opacityTo: 1, stops: [0, 100] } },
   };
 
-  // Method effectiveness chart
   methodChartOptions: {
     series: ApexAxisChartSeries;
     chart: ApexChart;
@@ -155,7 +143,6 @@ export class AiDashboardComponent implements OnInit, OnDestroy {
     colors: [METHOD_COLORS[0]],
   };
 
-  // ─── Lifecycle ───────────────────────────────────────────────
   ngOnInit(): void {
     this._loadHealth();
     this.planApi.getPlans(0, 100).pipe(catchError(() => of(null)), takeUntil(this.destroy$))
@@ -177,7 +164,6 @@ export class AiDashboardComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  // ─── Public actions ─────────────────────────────────────────
   refresh(): void {
     const id = this.selectedPlanId.value;
     if (id) this._loadRecommendations(id);
@@ -188,7 +174,6 @@ export class AiDashboardComponent implements OnInit, OnDestroy {
     if (id) this._loadRecommendations(id);
   }
 
-  // ─── Template helpers ────────────────────────────────────────
   get healthStatusClass(): string {
     if (!this.aiHealth) return 'status-unknown';
     if (this.aiHealth.model_loaded) return 'status-ready';
@@ -244,7 +229,6 @@ export class AiDashboardComponent implements OnInit, OnDestroy {
     return m.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
 
-  // ─── Private ─────────────────────────────────────────────────
   private _loadHealth(): void {
     this.healthLoading.set(true);
     this.aiApi.getHealth().pipe(catchError(() => of(null)), takeUntil(this.destroy$))
@@ -281,10 +265,8 @@ export class AiDashboardComponent implements OnInit, OnDestroy {
     if (!this.aiData) return;
     const risk = this.aiData.risk_assessment;
 
-    // Risk gauge
     this.riskGaugeOptions = this._buildRiskGauge(risk.risk_score, risk.risk_level);
 
-    // Completion radial
     this.completionRadial = {
       ...this.completionRadial,
       series: [
@@ -294,7 +276,6 @@ export class AiDashboardComponent implements OnInit, OnDestroy {
       ],
     };
 
-    // Method effectiveness
     if (this.aiData.method_effectiveness.length) {
       const methods = this.aiData.method_effectiveness;
       const barColors = methods.map((_m, i) => METHOD_COLORS[i % METHOD_COLORS.length]);

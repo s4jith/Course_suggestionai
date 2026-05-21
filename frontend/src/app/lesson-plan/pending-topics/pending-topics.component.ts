@@ -44,9 +44,14 @@ export class PendingTopicsComponent implements OnInit {
   }
 
   loadData(): void {
+    if (!this.selectedPlanId) {
+      this.topics = [];
+      this.filteredTopics = [];
+      this.loading = false;
+      return;
+    }
     this.loading = true;
-    const planId = this.selectedPlanId || undefined;
-    this.progressApi.getPending(planId).subscribe({
+    this.progressApi.getPending(this.selectedPlanId).subscribe({
       next: (res) => {
         this.topics = res.data ?? [];
         this.filteredTopics = [...this.topics];
@@ -66,7 +71,6 @@ export class PendingTopicsComponent implements OnInit {
     const plan = this.plans.find(p => p.id === topic.lesson_plan_id);
     if (!plan) return;
 
-    // Build minimal context for dialog
     const planFull = { id: plan.id, subject_id: topic.subject_id } as never;
     const chapter = { chapter_id: topic.chapter_id, title: topic.chapter_title ?? 'Chapter', topics: [] } as never;
     const topicObj = { topic_id: topic.topic_id, title: topic.topic_title ?? 'Topic' } as never;

@@ -1,10 +1,3 @@
-"""
-Request / response logging middleware.
-
-Logs every incoming request and its response status code + processing time.
-Uses Python's standard `logging` module so output integrates with any
-log aggregator (stdout/stderr, file, etc.).
-"""
 
 import logging
 import time
@@ -15,18 +8,9 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 
 logger = logging.getLogger("api.access")
 
-
 class LoggingMiddleware(BaseHTTPMiddleware):
-    """
-    Starlette middleware that instruments every HTTP request with:
-    - A unique request ID (X-Request-ID header)
-    - Method, path, query params
-    - Response status code
-    - Wall-clock processing time in milliseconds
-    """
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        # Generate a unique ID for correlation across log lines
         request_id = str(uuid.uuid4())
         request.state.request_id = request_id
 
@@ -52,7 +36,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             elapsed_ms,
         )
 
-        # Propagate the request ID to the client for debugging
         response.headers["X-Request-ID"] = request_id
         response.headers["X-Process-Time-Ms"] = f"{elapsed_ms:.2f}"
 

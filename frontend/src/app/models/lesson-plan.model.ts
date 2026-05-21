@@ -110,7 +110,7 @@ export interface TopicProgress {
   updated_by: string;
   created_at: string;
   updated_at: string;
-  // Enriched fields sometimes returned by the API
+
   topic_title?: string;
   chapter_title?: string;
   lesson_plan_title?: string;

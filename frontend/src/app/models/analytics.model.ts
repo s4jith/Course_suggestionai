@@ -1,8 +1,4 @@
-// Analytics domain models – mirrors the backend Pydantic schemas exactly.
 
-// ===========================================================================
-// Overview KPIs
-// ===========================================================================
 
 export interface OverviewKPI {
   total_lesson_plans: number;
@@ -20,10 +16,6 @@ export interface OverviewKPI {
   delayed_topics: number;
   avg_understanding_score: number | null;
 }
-
-// ===========================================================================
-// Syllabus completion
-// ===========================================================================
 
 export interface SyllabusCompletionItem {
   lesson_plan_id: string;
@@ -45,10 +37,6 @@ export interface SyllabusCompletionResponse {
   avg_completion_pct: number;
 }
 
-// ===========================================================================
-// Faculty analytics
-// ===========================================================================
-
 export interface FacultyAnalyticsItem {
   teacher_id: string;
   teacher_name: string;
@@ -67,10 +55,6 @@ export interface FacultyAnalyticsItem {
 export interface FacultyAnalyticsResponse {
   items: FacultyAnalyticsItem[];
 }
-
-// ===========================================================================
-// Subject analytics
-// ===========================================================================
 
 export interface SubjectAnalyticsItem {
   subject_id: string;
@@ -91,10 +75,6 @@ export interface SubjectAnalyticsResponse {
   items: SubjectAnalyticsItem[];
 }
 
-// ===========================================================================
-// Delayed topics
-// ===========================================================================
-
 export interface DelayedTopicItem {
   topic_id: string;
   topic_title: string;
@@ -113,10 +93,6 @@ export interface DelayedTopicsResponse {
   items: DelayedTopicItem[];
   total_delayed: number;
 }
-
-// ===========================================================================
-// Risk scores
-// ===========================================================================
 
 export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
 
@@ -139,10 +115,6 @@ export interface RiskScoresResponse {
   avg_risk_score: number;
 }
 
-// ===========================================================================
-// Teaching method effectiveness
-// ===========================================================================
-
 export interface TeachingMethodItem {
   method: string;
   label: string;
@@ -160,10 +132,6 @@ export interface TeachingMethodItem {
 export interface TeachingMethodResponse {
   items: TeachingMethodItem[];
 }
-
-// ===========================================================================
-// Student understanding analytics
-// ===========================================================================
 
 export interface UnderstandingBreakdown {
   excellent: number;
@@ -189,10 +157,6 @@ export interface UnderstandingAnalyticsResponse {
   by_subject: UnderstandingBySubject[];
 }
 
-// ===========================================================================
-// Completion trend
-// ===========================================================================
-
 export interface CompletionTrendPoint {
   date: string;
   completed_count: number;
@@ -204,10 +168,6 @@ export interface CompletionTrendResponse {
   period_days: number;
 }
 
-// ===========================================================================
-// Heatmap
-// ===========================================================================
-
 export interface HeatmapCell {
   date: string;
   count: number;
@@ -218,10 +178,6 @@ export interface HeatmapResponse {
   cells: HeatmapCell[];
   max_count: number;
 }
-
-// ===========================================================================
-// Filters
-// ===========================================================================
 
 export interface AnalyticsFilters {
   academic_year?: string;

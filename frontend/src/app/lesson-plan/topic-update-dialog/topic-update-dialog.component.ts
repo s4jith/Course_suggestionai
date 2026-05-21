@@ -80,7 +80,6 @@ export class TopicUpdateDialogComponent implements OnInit {
       });
     }
 
-    // Auto-set status based on completion %
     this.form.get('completion_percentage')?.valueChanges.subscribe(pct => {
       if (pct === 100 && this.form.get('status')?.value === 'in_progress') {
         this.form.get('status')?.setValue('completed', { emitEvent: false });

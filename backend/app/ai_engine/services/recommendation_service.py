@@ -1,17 +1,3 @@
-"""
-Recommendation Service – hybrid AI orchestration layer.
-
-Pipeline for each request:
-  1. Data extraction   → build a PlanContext from MongoDB documents
-  2. Rule engine       → deterministic, fast recommendations
-  3. Risk analysis     → risk score and contributing factors
-  4. LLM enhancement  → Ollama narrative / explanation enrichment
-  5. Response assembly → merge rule output + LLM into final schema
-
-Fallback safety: if Ollama is unavailable (timeout, connection error,
-bad parse), the service logs a warning and returns a rules-only response.
-No request ever fails because of LLM unavailability.
-"""
 
 import logging
 from datetime import datetime, timezone
@@ -54,7 +40,6 @@ from app.schemas.ai import (
 
 logger = logging.getLogger(__name__)
 
-# Maps risk_level string → RiskLevel enum
 _RISK_LEVEL_MAP = {
     "low": RiskLevel.LOW,
     "medium": RiskLevel.MEDIUM,
@@ -62,23 +47,12 @@ _RISK_LEVEL_MAP = {
     "critical": RiskLevel.CRITICAL,
 }
 
-
 class RecommendationService:
-    """
-    Orchestrates the full AI recommendation pipeline for a lesson plan.
-
-    Instantiated per-request via FastAPI's dependency injection using
-    the shared Motor database connection.
-    """
 
     def __init__(self, db: AsyncIOMotorDatabase) -> None:
         self._plan_repo = LessonPlanRepository(db)
         self._subject_repo = SubjectRepository(db)
         self._progress_repo = TopicProgressRepository(db)
-
-    # ------------------------------------------------------------------
-    # Full recommendation report
-    # ------------------------------------------------------------------
 
     async def get_full_recommendations(
         self,
@@ -86,34 +60,20 @@ class RecommendationService:
         teacher_id: Optional[str] = None,
         include_llm: bool = True,
     ) -> AIRecommendationResponse:
-        """
-        Generate the complete AI recommendation report.
-
-        Args:
-            lesson_plan_id: MongoDB ObjectId string of the lesson plan.
-            teacher_id:     Optional teacher filter for progress records.
-            include_llm:    If False, skip Ollama entirely (rules only).
-
-        Returns:
-            AIRecommendationResponse with all fields populated.
-        """
         ctx = await self._build_context(lesson_plan_id, teacher_id)
 
-        # --- Rule engine ---
         next_snap = get_next_topic(ctx)
         weak_snaps = get_weak_areas(ctx)
         risk_report = compute_risk(ctx)
         timetable_raw = suggest_timetable(ctx)
         forecast = forecast_completion(ctx)
 
-        # --- Assemble rule-based output ---
         next_topic_rec = self._build_next_topic_rec(ctx, next_snap)
         weak_alerts = self._build_weak_alerts(weak_snaps)
         risk_assessment = self._build_risk_assessment(risk_report, forecast)
         timetable = self._build_timetable(timetable_raw)
         method_eff = self._build_method_effectiveness(ctx)
 
-        # --- LLM enrichment ---
         llm_insights: Optional[dict] = None
         ai_summary: Optional[str] = None
         fallback_mode = not include_llm
@@ -143,17 +103,12 @@ class RecommendationService:
             fallback_mode=fallback_mode,
         )
 
-    # ------------------------------------------------------------------
-    # Risk-only report
-    # ------------------------------------------------------------------
-
     async def get_risk_assessment(
         self,
         lesson_plan_id: str,
         teacher_id: Optional[str] = None,
         include_llm: bool = True,
     ) -> dict:
-        """Lightweight risk-only endpoint with optional LLM narrative."""
         ctx = await self._build_context(lesson_plan_id, teacher_id)
         risk_report = compute_risk(ctx)
         forecast = forecast_completion(ctx)
@@ -171,17 +126,12 @@ class RecommendationService:
             "fallback_mode": llm_narrative is None,
         }
 
-    # ------------------------------------------------------------------
-    # Next-topic only
-    # ------------------------------------------------------------------
-
     async def get_next_topic_recommendation(
         self,
         lesson_plan_id: str,
         teacher_id: Optional[str] = None,
         include_llm: bool = True,
     ) -> dict:
-        """Return the next recommended topic with optional LLM teaching guidance."""
         ctx = await self._build_context(lesson_plan_id, teacher_id)
         snap = get_next_topic(ctx)
         rec = self._build_next_topic_rec(ctx, snap)
@@ -205,10 +155,6 @@ class RecommendationService:
             "fallback_mode": llm_guidance is None,
         }
 
-    # ------------------------------------------------------------------
-    # Timetable only
-    # ------------------------------------------------------------------
-
     async def get_timetable_suggestions(
         self,
         lesson_plan_id: str,
@@ -216,7 +162,6 @@ class RecommendationService:
         teaching_days_per_week: int = 5,
         include_llm: bool = True,
     ) -> dict:
-        """Generate smart timetable for remaining topics with LLM optimisation tips."""
         ctx = await self._build_context(lesson_plan_id, teacher_id)
         timetable_raw = suggest_timetable(ctx, teaching_days_per_week)
         timetable = self._build_timetable(timetable_raw)
@@ -234,17 +179,12 @@ class RecommendationService:
             "fallback_mode": llm_analysis is None,
         }
 
-    # ------------------------------------------------------------------
-    # Weak areas
-    # ------------------------------------------------------------------
-
     async def get_weak_areas(
         self,
         lesson_plan_id: str,
         teacher_id: Optional[str] = None,
         include_llm: bool = True,
     ) -> dict:
-        """Return topics needing revision with optional LLM-generated strategies."""
         ctx = await self._build_context(lesson_plan_id, teacher_id)
         weak_snaps = get_weak_areas(ctx)
         alerts = self._build_weak_alerts(weak_snaps)
@@ -261,16 +201,11 @@ class RecommendationService:
             "fallback_mode": llm_strategies is None,
         }
 
-    # ------------------------------------------------------------------
-    # Internal: MongoDB context builder
-    # ------------------------------------------------------------------
-
     async def _build_context(
         self,
         lesson_plan_id: str,
         teacher_id: Optional[str],
     ) -> PlanContext:
-        """Load plan + subject + progress from MongoDB and build a PlanContext."""
         plan = await self._plan_repo.find_by_id(lesson_plan_id)
         if plan is None:
             raise NotFoundException("LessonPlan")
@@ -286,10 +221,6 @@ class RecommendationService:
             progress_records = [p for p in progress_records if p.teacher_id == teacher_id]
 
         return build_plan_context(plan, subject_name, progress_records)
-
-    # ------------------------------------------------------------------
-    # Internal: schema builders
-    # ------------------------------------------------------------------
 
     def _build_next_topic_rec(
         self,
@@ -413,10 +344,6 @@ class RecommendationService:
             ))
         return sorted(items, key=lambda x: x.avg_understanding_score, reverse=True)
 
-    # ------------------------------------------------------------------
-    # Internal: LLM enrichment
-    # ------------------------------------------------------------------
-
     async def _enrich_with_llm(
         self,
         ctx: PlanContext,
@@ -427,16 +354,9 @@ class RecommendationService:
         forecast: dict,
         weak_snaps: List[TopicSnapshot],
     ) -> Tuple[Optional[dict], Optional[str], bool]:
-        """
-        Call Ollama for all LLM enrichment tasks in sequence.
-
-        Returns:
-            (llm_insights_dict, ai_summary_str, had_any_failures)
-        """
         llm_insights: dict = {}
         had_failures = False
 
-        # --- 1. Holistic summary (primary LLM call) ---
         summary_data = await ollama_service.generate(
             summary_insights_prompt(ctx, risk_report, forecast)
         )
@@ -448,7 +368,6 @@ class RecommendationService:
             had_failures = True
             logger.debug("LLM: summary insights call returned None for plan %s", ctx.plan_id)
 
-        # --- 2. Next topic guidance ---
         if next_snap is not None and next_topic_rec is not None:
             method = recommend_teaching_method(next_snap.topic_title, ctx)
             nt_data = await ollama_service.generate(
@@ -462,13 +381,11 @@ class RecommendationService:
             )
             if nt_data:
                 llm_insights["next_topic"] = nt_data
-                # Upgrade the rule-based reason with the LLM explanation
                 if nt_data.get("recommendation_reason"):
                     next_topic_rec.reason = nt_data["recommendation_reason"]
             else:
                 had_failures = True
 
-        # --- 3. Weak areas revision strategies ---
         if weak_snaps:
             wa_data = await ollama_service.generate(
                 weak_areas_prompt(ctx, [s.topic_title for s in weak_snaps])
@@ -478,14 +395,12 @@ class RecommendationService:
             else:
                 had_failures = True
 
-        # --- 4. Timetable insights ---
         tt_data = await ollama_service.generate(timetable_prompt(ctx, timetable_raw))
         if tt_data:
             llm_insights["timetable"] = tt_data
         else:
             had_failures = True
 
-        # --- 5. Risk narrative ---
         risk_data = await ollama_service.generate(risk_explanation_prompt(ctx, risk_report))
         if risk_data:
             llm_insights["risk"] = risk_data

@@ -1,12 +1,3 @@
-"""
-Subject routes – CRUD for the `subjects` collection.
-
-All routes live under the /api/v1/subjects prefix (configured in main.py).
-
-Permissions:
-  - GET  endpoints: any authenticated active user
-  - POST / PATCH / DELETE: teacher or admin
-"""
 
 from typing import Annotated, Optional
 
@@ -22,18 +13,8 @@ from app.services.lesson_plan_service import LessonPlanService
 
 router = APIRouter(prefix="/subjects", tags=["Subjects"])
 
-
-# ---------------------------------------------------------------------------
-# Dependency
-# ---------------------------------------------------------------------------
-
 def get_service(db: Annotated[AsyncIOMotorDatabase, Depends(get_database)]) -> LessonPlanService:
     return LessonPlanService(db)
-
-
-# ---------------------------------------------------------------------------
-# Endpoints
-# ---------------------------------------------------------------------------
 
 @router.post(
     "/",
@@ -46,25 +27,8 @@ async def create_subject(
     current_user: Annotated[UserDocument, Depends(require_teacher)],
     service: Annotated[LessonPlanService, Depends(get_service)],
 ):
-    """
-    Create a new academic subject.
-    Subject codes are unique and automatically upper-cased.
-
-    **Example request:**
-    ```json
-    {
-      "name": "Data Structures",
-      "code": "CS301",
-      "description": "Fundamental data structures and algorithms",
-      "department": "Computer Science",
-      "semester": 3,
-      "total_hours": 60
-    }
-    ```
-    """
     subject = await service.create_subject(payload, current_user)
     return success_response(data=subject, message="Subject created successfully.")
-
 
 @router.get(
     "/",
@@ -81,7 +45,6 @@ async def list_subjects(
     _: Annotated[UserDocument, Depends(get_current_active_user)] = None,
     service: Annotated[LessonPlanService, Depends(get_service)] = None,
 ):
-    """Return a paginated list of subjects, optionally filtered by department, semester, or active status."""
     skip = (page - 1) * page_size
     subjects, total = await service.list_subjects(department, semester, is_active, skip, page_size)
     return PaginatedResponse(
@@ -91,7 +54,6 @@ async def list_subjects(
         page_size=page_size,
         total_pages=-(-total // page_size),
     )
-
 
 @router.get(
     "/{subject_id}",
@@ -106,7 +68,6 @@ async def get_subject(
 ):
     subject = await service.get_subject(subject_id)
     return success_response(data=subject, message="Subject retrieved successfully.")
-
 
 @router.patch(
     "/{subject_id}",
@@ -123,7 +84,6 @@ async def update_subject(
     updated = await service.update_subject(subject_id, payload, current_user)
     return success_response(data=updated, message="Subject updated successfully.")
 
-
 @router.delete(
     "/{subject_id}",
     response_model=SuccessResponse,
@@ -135,6 +95,5 @@ async def deactivate_subject(
     current_user: Annotated[UserDocument, Depends(require_teacher)],
     service: Annotated[LessonPlanService, Depends(get_service)],
 ):
-    """Soft-delete a subject by setting is_active = False."""
     await service.deactivate_subject(subject_id)
     return success_response(message="Subject deactivated successfully.")

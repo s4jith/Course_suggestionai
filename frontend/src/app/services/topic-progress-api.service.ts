@@ -42,7 +42,7 @@ export class TopicProgressApiService {
 
   getCompletionStats(lessonPlanId: string): Observable<ApiResponse<CompletionStats>> {
     return this.http.get<ApiResponse<CompletionStats>>(
-      `${this.base}/stats/${lessonPlanId}`
+      `${this.base}/completion/${lessonPlanId}`
     );
   }
 

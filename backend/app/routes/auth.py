@@ -1,8 +1,3 @@
-"""
-Authentication routes: register, login, token refresh, and profile.
-
-All routes live under the /api/v1/auth prefix (configured in main.py).
-"""
 
 from typing import Annotated
 
@@ -19,20 +14,10 @@ from app.services.auth_service import AuthService
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-
-# ---------------------------------------------------------------------------
-# Dependency: AuthService with injected DB
-# ---------------------------------------------------------------------------
-
 def get_auth_service(
     db: Annotated[AsyncIOMotorDatabase, Depends(get_database)],
 ) -> AuthService:
     return AuthService(db)
-
-
-# ---------------------------------------------------------------------------
-# Endpoints
-# ---------------------------------------------------------------------------
 
 @router.post(
     "/register",
@@ -44,16 +29,8 @@ async def register(
     payload: UserCreate,
     service: Annotated[AuthService, Depends(get_auth_service)],
 ):
-    """
-    Create a new user account (Teacher or Admin).
-
-    - Validates password strength
-    - Hashes the password with bcrypt
-    - Returns the new user's public profile (no password)
-    """
     user = await service.register(payload)
     return success_response(data=user, message="Account created successfully.")
-
 
 @router.post(
     "/login",
@@ -65,16 +42,8 @@ async def login(
     payload: UserLogin,
     service: Annotated[AuthService, Depends(get_auth_service)],
 ):
-    """
-    Authenticate with email + password.
-
-    Returns:
-    - **access_token**: Short-lived JWT for API requests (30 min by default)
-    - **refresh_token**: Long-lived JWT for obtaining new access tokens
-    """
     tokens = await service.login(payload.email, payload.password)
     return success_response(data=tokens, message="Login successful.")
-
 
 @router.post(
     "/refresh",
@@ -86,12 +55,8 @@ async def refresh_tokens(
     payload: RefreshTokenRequest,
     service: Annotated[AuthService, Depends(get_auth_service)],
 ):
-    """
-    Exchange a valid refresh token for a new access + refresh token pair.
-    """
     tokens = await service.refresh_tokens(payload.refresh_token)
     return success_response(data=tokens, message="Tokens refreshed successfully.")
-
 
 @router.get(
     "/me",
@@ -103,9 +68,5 @@ async def get_me(
     current_user: Annotated[UserDocument, Depends(get_current_active_user)],
     service: Annotated[AuthService, Depends(get_auth_service)],
 ):
-    """
-    Protected endpoint – requires a valid Bearer access token.
-    Returns the authenticated user's public profile.
-    """
     profile = await service.get_profile(current_user)
     return success_response(data=profile, message="Profile retrieved successfully.")

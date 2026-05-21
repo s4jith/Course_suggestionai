@@ -1,10 +1,3 @@
-"""
-AI Recommendation Schemas – Pydantic v2 request/response models for the
-AI Recommendation Engine API.
-
-All schemas follow the same patterns established by the existing lesson plan
-module (schemas/lesson_plan.py).
-"""
 
 from datetime import datetime
 from enum import Enum
@@ -14,25 +7,13 @@ from pydantic import BaseModel, Field
 
 from app.models.lesson_plan import TeachingMethod, UnderstandingLevel
 
-
-# ---------------------------------------------------------------------------
-# Enumerations
-# ---------------------------------------------------------------------------
-
 class RiskLevel(str, Enum):
-    """Qualitative risk tier derived from the numeric risk score."""
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
     CRITICAL = "critical"
 
-
-# ---------------------------------------------------------------------------
-# Component schemas
-# ---------------------------------------------------------------------------
-
 class NextTopicRecommendation(BaseModel):
-    """The AI engine's recommendation for which topic to teach next."""
 
     topic_id: str
     topic_title: str
@@ -47,9 +28,7 @@ class NextTopicRecommendation(BaseModel):
     class Config:
         from_attributes = True
 
-
 class WeakAreaAlert(BaseModel):
-    """A completed topic where student understanding was poor or average."""
 
     topic_id: str
     topic_title: str
@@ -63,9 +42,7 @@ class WeakAreaAlert(BaseModel):
     class Config:
         from_attributes = True
 
-
 class TimetableEntry(BaseModel):
-    """A single day-slot in the AI-generated teaching schedule."""
 
     slot: int = Field(..., description="Sequential slot number starting from 1")
     date: str = Field(..., description="ISO date string: YYYY-MM-DD")
@@ -79,9 +56,7 @@ class TimetableEntry(BaseModel):
     class Config:
         from_attributes = True
 
-
 class RiskAssessment(BaseModel):
-    """Comprehensive risk assessment for a lesson plan."""
 
     risk_score: float = Field(
         ..., ge=0, le=100,
@@ -104,9 +79,7 @@ class RiskAssessment(BaseModel):
     class Config:
         from_attributes = True
 
-
 class MethodEffectivenessItem(BaseModel):
-    """Effectiveness statistics for one teaching method used in the plan."""
 
     method: TeachingMethod
     avg_understanding_score: float = Field(
@@ -120,17 +93,7 @@ class MethodEffectivenessItem(BaseModel):
     class Config:
         from_attributes = True
 
-
-# ---------------------------------------------------------------------------
-# Top-level response schema
-# ---------------------------------------------------------------------------
-
 class AIRecommendationResponse(BaseModel):
-    """
-    Full AI recommendation report for a lesson plan.
-
-    Returned by the GET /api/v1/ai/recommendations/{lesson_plan_id} endpoint.
-    """
 
     lesson_plan_id: str
     generated_at: datetime

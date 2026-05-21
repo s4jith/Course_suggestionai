@@ -1,4 +1,4 @@
-/** Standard API envelope returned by the FastAPI backend. */
+
 export interface ApiResponse<T> {
   success: boolean;
   message: string;

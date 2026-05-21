@@ -1,12 +1,3 @@
-"""
-Lesson Plan routes – full CRUD plus nested chapter / topic / subtopic management.
-
-All routes live under the /api/v1/lesson-plans prefix (configured in main.py).
-
-Permissions:
-  - GET  endpoints: any authenticated active user
-  - POST / PATCH: teacher or admin
-"""
 
 from typing import Annotated, Optional
 
@@ -31,18 +22,8 @@ from app.services.lesson_plan_service import LessonPlanService
 
 router = APIRouter(prefix="/lesson-plans", tags=["Lesson Plans"])
 
-
-# ---------------------------------------------------------------------------
-# Dependency
-# ---------------------------------------------------------------------------
-
 def get_service(db: Annotated[AsyncIOMotorDatabase, Depends(get_database)]) -> LessonPlanService:
     return LessonPlanService(db)
-
-
-# ===========================================================================
-# Lesson Plan CRUD
-# ===========================================================================
 
 @router.post(
     "/",
@@ -55,37 +36,8 @@ async def create_lesson_plan(
     current_user: Annotated[UserDocument, Depends(require_teacher)],
     service: Annotated[LessonPlanService, Depends(get_service)],
 ):
-    """
-    Create a lesson plan for a subject. Chapters, topics, and subtopics
-    can be included inline or added later via nested endpoints.
-
-    **Example request:**
-    ```json
-    {
-      "subject_id": "683abc123def456789012345",
-      "academic_year": "2025-26",
-      "semester": 3,
-      "title": "DS Full Semester Plan",
-      "description": "Complete lesson plan for Data Structures",
-      "chapters": [
-        {
-          "title": "Arrays and Strings",
-          "order": 1,
-          "topics": [
-            {
-              "title": "Introduction to Arrays",
-              "planned_hours": 2,
-              "order": 1
-            }
-          ]
-        }
-      ]
-    }
-    ```
-    """
     plan = await service.create_lesson_plan(payload, current_user)
     return success_response(data=plan, message="Lesson plan created successfully.")
-
 
 @router.get(
     "/",
@@ -104,10 +56,6 @@ async def list_lesson_plans(
     _: Annotated[UserDocument, Depends(get_current_active_user)] = None,
     service: Annotated[LessonPlanService, Depends(get_service)] = None,
 ):
-    """
-    Return a paginated list of lesson plan summaries.
-    Use `teacher_id=me` pattern by passing your own ID, or let admins query any teacher.
-    """
     skip = (page - 1) * page_size
     plans, total = await service.list_lesson_plans(
         teacher_id, subject_id, academic_year, plan_status, semester, skip, page_size
@@ -120,7 +68,6 @@ async def list_lesson_plans(
         total_pages=-(-total // page_size),
     )
 
-
 @router.get(
     "/{plan_id}",
     response_model=SuccessResponse[LessonPlanResponse],
@@ -132,10 +79,8 @@ async def get_lesson_plan(
     _: Annotated[UserDocument, Depends(get_current_active_user)] = None,
     service: Annotated[LessonPlanService, Depends(get_service)] = None,
 ):
-    """Return the full lesson plan including all chapters → topics → subtopics."""
     plan = await service.get_lesson_plan(plan_id)
     return success_response(data=plan, message="Lesson plan retrieved successfully.")
-
 
 @router.patch(
     "/{plan_id}",
@@ -149,19 +94,8 @@ async def update_lesson_plan(
     current_user: Annotated[UserDocument, Depends(require_teacher)],
     service: Annotated[LessonPlanService, Depends(get_service)],
 ):
-    """
-    Update title, description, or status of a lesson plan.
-    Teachers can only update their own plans; admins can update any.
-
-    **Status transitions:** draft → active → completed → archived
-    """
     updated = await service.update_lesson_plan(plan_id, payload, current_user)
     return success_response(data=updated, message="Lesson plan updated successfully.")
-
-
-# ===========================================================================
-# Chapter management
-# ===========================================================================
 
 @router.post(
     "/{plan_id}/chapters",
@@ -175,28 +109,8 @@ async def add_chapter(
     current_user: Annotated[UserDocument, Depends(require_teacher)],
     service: Annotated[LessonPlanService, Depends(get_service)],
 ):
-    """
-    Append a new chapter (with optional topics) to an existing lesson plan.
-
-    **Example request:**
-    ```json
-    {
-      "title": "Linked Lists",
-      "order": 2,
-      "topics": [
-        {"title": "Singly Linked List", "planned_hours": 2, "order": 1},
-        {"title": "Doubly Linked List", "planned_hours": 2, "order": 2}
-      ]
-    }
-    ```
-    """
     updated = await service.add_chapter(plan_id, payload, current_user)
     return success_response(data=updated, message="Chapter added successfully.")
-
-
-# ===========================================================================
-# Topic management
-# ===========================================================================
 
 @router.post(
     "/{plan_id}/chapters/{chapter_id}/topics",
@@ -211,30 +125,8 @@ async def add_topic(
     current_user: Annotated[UserDocument, Depends(require_teacher)],
     service: Annotated[LessonPlanService, Depends(get_service)],
 ):
-    """
-    Append a new topic (with optional subtopics) to a chapter.
-
-    **Example request:**
-    ```json
-    {
-      "title": "Circular Linked List",
-      "planned_hours": 1.5,
-      "planned_date": "2026-06-10T09:00:00",
-      "order": 3,
-      "subtopics": [
-        {"title": "Insertion in circular LL", "order": 1},
-        {"title": "Deletion in circular LL", "order": 2}
-      ]
-    }
-    ```
-    """
     updated = await service.add_topic(plan_id, chapter_id, payload, current_user)
     return success_response(data=updated, message="Topic added successfully.")
-
-
-# ===========================================================================
-# Subtopic management
-# ===========================================================================
 
 @router.post(
     "/{plan_id}/chapters/{chapter_id}/topics/{topic_id}/subtopics",
@@ -250,16 +142,5 @@ async def add_subtopic(
     current_user: Annotated[UserDocument, Depends(require_teacher)],
     service: Annotated[LessonPlanService, Depends(get_service)],
 ):
-    """
-    Append a subtopic to a topic.
-
-    **Example request:**
-    ```json
-    {
-      "title": "Time complexity of circular LL operations",
-      "order": 3
-    }
-    ```
-    """
     updated = await service.add_subtopic(plan_id, chapter_id, topic_id, payload, current_user)
     return success_response(data=updated, message="Subtopic added successfully.")

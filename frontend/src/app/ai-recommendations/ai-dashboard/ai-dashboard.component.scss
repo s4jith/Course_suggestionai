@@ -1,15 +1,10 @@
-﻿// =====================================================================
-// AI Dashboard - Component Styles
-// =====================================================================
+
 
 :host {
   display: block;
   padding-bottom: 48px;
 }
 
-// =====================================================================
-// Skeleton loading animation
-// =====================================================================
 @keyframes shimmer {
   0%   { background-position: -600px 0; }
   100% { background-position: 600px 0; }
@@ -57,9 +52,6 @@
   }
 }
 
-// =====================================================================
-// AI Status Bar
-// =====================================================================
 .ai-status-bar {
   display: flex;
   align-items: center;
@@ -116,9 +108,6 @@
   mat-icon { font-size: 14px; height: 14px; width: 14px; }
 }
 
-// =====================================================================
-// Plan select + refresh
-// =====================================================================
 .plan-select {
   min-width: 240px;
   .mat-mdc-form-field-subscript-wrapper { display: none; }
@@ -131,9 +120,6 @@
   border-radius: 8px;
 }
 
-// =====================================================================
-// Mode banners (AI-powered / fallback)
-// =====================================================================
 .mode-banner {
   display: flex;
   align-items: flex-start;
@@ -166,9 +152,6 @@
   }
 }
 
-// =====================================================================
-// Delay warnings strip
-// =====================================================================
 .delay-strip {
   display: flex;
   align-items: center;
@@ -195,9 +178,6 @@
   }
 }
 
-// =====================================================================
-// Layout grids
-// =====================================================================
 .section-grid {
   display: grid;
   gap: 16px;
@@ -211,12 +191,8 @@
   }
 }
 
-// Shared spacer
 .spacer { flex: 1; }
 
-// =====================================================================
-// Card base
-// =====================================================================
 mat-card {
   border-radius: 14px !important;
   box-shadow: 0 1px 6px rgba(15,23,42,.07) !important;
@@ -251,9 +227,6 @@ mat-card {
   mat-card-content { padding: 8px 20px 16px; }
 }
 
-// =====================================================================
-// Risk Assessment card
-// =====================================================================
 .risk-card {
   border-left: 4px solid #94a3b8;
   transition: border-color 0.3s;
@@ -338,9 +311,6 @@ mat-card {
   mat-icon { font-size: 16px; height: 16px; width: 16px; color: #6366f1; flex-shrink: 0; margin-top: 1px; }
 }
 
-// =====================================================================
-// Next Topic card
-// =====================================================================
 .next-topic-card {
   display: flex;
   flex-direction: column;
@@ -430,9 +400,6 @@ mat-card {
   }
 }
 
-// =====================================================================
-// LLM Insight panels
-// =====================================================================
 .insight-panel {
   background: #fafaf9 !important;
   border: 1px solid #e7e5e4 !important;
@@ -529,9 +496,6 @@ mat-card {
   }
 }
 
-// =====================================================================
-// AI Summary card
-// =====================================================================
 .ai-summary-card {
   mat-card-header {
     background: linear-gradient(135deg, #ede9fe 0%, #e0e7ff 100%);
@@ -581,9 +545,6 @@ mat-card {
   mat-icon { font-size: 16px; height: 16px; width: 16px; flex-shrink: 0; color: #ec4899; margin-top: 1px; }
 }
 
-// =====================================================================
-// Weak Areas card
-// =====================================================================
 .weak-areas-card {
   mat-card-header mat-card-title mat-icon { color: #f97316 !important; }
 }
@@ -766,9 +727,6 @@ mat-card {
   }
 }
 
-// =====================================================================
-// Teaching Methods card
-// =====================================================================
 .method-card {
   mat-card-header mat-card-title mat-icon { color: #0ea5e9 !important; }
 }
@@ -814,9 +772,6 @@ mat-card {
   mat-progress-bar { border-radius: 4px; height: 5px !important; }
 }
 
-// =====================================================================
-// Smart Timetable card
-// =====================================================================
 .timetable-card {
   mat-card-header mat-card-title mat-icon { color: #10b981 !important; }
 }
@@ -929,9 +884,6 @@ mat-card {
   font-weight: 500;
 }
 
-// =====================================================================
-// Empty & Error states
-// =====================================================================
 .empty-state {
   text-align: center;
   padding: 60px 24px;
@@ -980,9 +932,6 @@ mat-card {
   p  { margin: 0 0 16px; font-size: 14px; }
 }
 
-// =====================================================================
-// Responsive
-// =====================================================================
 @media (max-width: 960px) {
   .section-grid.two-col   { grid-template-columns: 1fr; }
   .section-grid.three-col { grid-template-columns: 1fr; }

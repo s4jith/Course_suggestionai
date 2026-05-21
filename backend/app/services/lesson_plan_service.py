@@ -1,11 +1,3 @@
-"""
-Lesson Plan Service – orchestrates all business logic for the module.
-
-Covers:
-  - Subject CRUD
-  - Lesson Plan CRUD + nested chapter / topic / subtopic management
-  - Topic progress recording and analytics
-"""
 
 from datetime import datetime
 from typing import Optional
@@ -48,11 +40,6 @@ from app.schemas.lesson_plan import (
     TopicResponse,
 )
 
-
-# ---------------------------------------------------------------------------
-# Internal helpers – model → response schema conversions
-# ---------------------------------------------------------------------------
-
 def _subject_to_response(s: SubjectDocument) -> SubjectResponse:
     return SubjectResponse(
         id=str(s.id),
@@ -68,7 +55,6 @@ def _subject_to_response(s: SubjectDocument) -> SubjectResponse:
         created_at=s.created_at,
         updated_at=s.updated_at,
     )
-
 
 def _progress_to_response(p: TopicProgressDocument) -> TopicProgressResponse:
     return TopicProgressResponse(
@@ -92,7 +78,6 @@ def _progress_to_response(p: TopicProgressDocument) -> TopicProgressResponse:
         created_at=p.created_at,
         updated_at=p.updated_at,
     )
-
 
 def _plan_to_response(plan: LessonPlanDocument) -> LessonPlanResponse:
     return LessonPlanResponse(
@@ -134,7 +119,6 @@ def _plan_to_response(plan: LessonPlanDocument) -> LessonPlanResponse:
         updated_at=plan.updated_at,
     )
 
-
 def _plan_to_summary(plan: LessonPlanDocument) -> LessonPlanSummary:
     total_topics = sum(len(ch.topics) for ch in plan.chapters)
     return LessonPlanSummary(
@@ -150,30 +134,16 @@ def _plan_to_summary(plan: LessonPlanDocument) -> LessonPlanSummary:
         updated_at=plan.updated_at,
     )
 
-
-# ---------------------------------------------------------------------------
-# Service class
-# ---------------------------------------------------------------------------
-
 class LessonPlanService:
-    """
-    Central service for Subjects, Lesson Plans, and Topic Progress.
-    All public methods are async and raise typed AppExceptions on errors.
-    """
 
     def __init__(self, db: AsyncIOMotorDatabase) -> None:
         self._subjects = SubjectRepository(db)
         self._plans = LessonPlanRepository(db)
         self._progress = TopicProgressRepository(db)
 
-    # =======================================================================
-    # Subject operations
-    # =======================================================================
-
     async def create_subject(
         self, payload: SubjectCreate, current_user: UserDocument
     ) -> SubjectResponse:
-        """Create a new subject. Subject codes must be globally unique."""
         if await self._subjects.code_exists(payload.code):
             raise AlreadyExistsException(f"Subject with code '{payload.code.upper()}'")
 
@@ -227,15 +197,9 @@ class LessonPlanService:
             raise NotFoundException("Subject")
         await self._subjects.deactivate(subject_id)
 
-    # =======================================================================
-    # Lesson Plan operations
-    # =======================================================================
-
     async def create_lesson_plan(
         self, payload: LessonPlanCreate, current_user: UserDocument
     ) -> LessonPlanResponse:
-        """Create a lesson plan, optionally pre-populated with chapters and topics."""
-        # Verify the subject exists
         subject = await self._subjects.find_by_id(payload.subject_id)
         if not subject:
             raise NotFoundException("Subject")
@@ -308,7 +272,6 @@ class LessonPlanService:
         if not plan:
             raise NotFoundException("Lesson plan")
 
-        # Teachers can only update their own plans; admins can update any
         if current_user.role == UserRole.TEACHER and plan.teacher_id != str(current_user.id):
             from app.core.exceptions import InsufficientPermissionsException
             raise InsufficientPermissionsException("admin")
@@ -320,10 +283,6 @@ class LessonPlanService:
 
         updated = await self._plans.update_plan(plan_id, updates)
         return _plan_to_response(updated)
-
-    # ------------------------------------------------------------------
-    # Chapter operations
-    # ------------------------------------------------------------------
 
     async def add_chapter(
         self, plan_id: str, payload: ChapterCreate, current_user: UserDocument
@@ -354,10 +313,6 @@ class LessonPlanService:
         updated = await self._plans.add_chapter(plan_id, chapter, str(current_user.id))
         return _plan_to_response(updated)
 
-    # ------------------------------------------------------------------
-    # Topic operations
-    # ------------------------------------------------------------------
-
     async def add_topic(
         self,
         plan_id: str,
@@ -369,7 +324,6 @@ class LessonPlanService:
         if not plan:
             raise NotFoundException("Lesson plan")
 
-        # Validate the chapter_id actually exists in this plan
         chapter_ids = [ch.chapter_id for ch in plan.chapters]
         if chapter_id not in chapter_ids:
             raise NotFoundException("Chapter")
@@ -388,10 +342,6 @@ class LessonPlanService:
         updated = await self._plans.add_topic(plan_id, chapter_id, topic, str(current_user.id))
         return _plan_to_response(updated)
 
-    # ------------------------------------------------------------------
-    # Subtopic operations
-    # ------------------------------------------------------------------
-
     async def add_subtopic(
         self,
         plan_id: str,
@@ -404,7 +354,6 @@ class LessonPlanService:
         if not plan:
             raise NotFoundException("Lesson plan")
 
-        # Validate chapter and topic exist in this plan
         chapter = next((ch for ch in plan.chapters if ch.chapter_id == chapter_id), None)
         if not chapter:
             raise NotFoundException("Chapter")
@@ -418,23 +367,13 @@ class LessonPlanService:
         )
         return _plan_to_response(updated)
 
-    # =======================================================================
-    # Topic Progress operations
-    # =======================================================================
-
     async def record_progress(
         self, payload: TopicProgressCreate, current_user: UserDocument
     ) -> TopicProgressResponse:
-        """
-        Upsert a progress record.
-        Auto-sets status to COMPLETED when completion_percentage == 100.
-        """
-        # Validate lesson plan exists
         plan = await self._plans.find_by_id(payload.lesson_plan_id)
         if not plan:
             raise NotFoundException("Lesson plan")
 
-        # Sync status when fully complete
         status = payload.status
         if payload.completion_percentage == 100.0:
             status = TopicStatus.COMPLETED
@@ -467,7 +406,6 @@ class LessonPlanService:
         if not updates:
             raise ValidationException("No update fields provided.")
 
-        # Sync status when explicitly set to 100%
         if updates.get("completion_percentage") == 100.0 and "status" not in updates:
             updates["status"] = TopicStatus.COMPLETED.value
         elif "status" in updates:
@@ -483,19 +421,19 @@ class LessonPlanService:
             raise NotFoundException("Progress record")
         return _progress_to_response(result)
 
+    async def list_progress_for_plan(
+        self, lesson_plan_id: str, skip: int = 0, limit: int = 50
+    ) -> list[TopicProgressResponse]:
+        records = await self._progress.list_for_plan(lesson_plan_id, skip=skip, limit=limit)
+        return [_progress_to_response(r) for r in records]
+
     async def get_pending_topics(
         self, lesson_plan_id: str, current_user: UserDocument
     ) -> list[PendingTopicItem]:
-        """
-        Return all topics not yet completed for a lesson plan.
-        Pending topics are derived from the plan's chapter/topic tree minus
-        completed progress records.
-        """
         plan = await self._plans.find_by_id(lesson_plan_id)
         if not plan:
             raise NotFoundException("Lesson plan")
 
-        # Fetch all completed topic IDs for this plan + teacher
         completed_docs = await self._progress.list_for_plan(
             lesson_plan_id, status=TopicStatus.COMPLETED, limit=1000
         )
@@ -519,10 +457,6 @@ class LessonPlanService:
         return pending
 
     async def get_completion_stats(self, lesson_plan_id: str) -> CompletionStats:
-        """
-        Return a completion summary for a lesson plan including percentage,
-        status breakdown, and hours delivered.
-        """
         plan = await self._plans.find_by_id(lesson_plan_id)
         if not plan:
             raise NotFoundException("Lesson plan")
@@ -554,9 +488,6 @@ class LessonPlanService:
     async def get_faculty_progress(
         self, teacher_id: str, academic_year: Optional[str] = None
     ) -> list[FacultyProgressItem]:
-        """
-        Return a progress summary row for every lesson plan belonging to a teacher.
-        """
         plans = await self._plans.list_plans(
             teacher_id=teacher_id, academic_year=academic_year, limit=100
         )

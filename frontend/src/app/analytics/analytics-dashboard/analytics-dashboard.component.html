@@ -3,9 +3,6 @@
   subtitle="Institution-wide analytics, progress tracking, and risk monitoring">
 </app-page-header>
 
-<!-- =========================================================================
-  Filter bar
-========================================================================== -->
 <div class="filter-bar mat-elevation-z1">
   <mat-form-field appearance="outline" class="filter-field">
     <mat-label>Academic Year</mat-label>
@@ -37,7 +34,6 @@
   }
 </div>
 
-<!-- Error banner -->
 @if (error()) {
   <div class="error-banner">
     <mat-icon>error_outline</mat-icon>
@@ -45,9 +41,6 @@
   </div>
 }
 
-<!-- =========================================================================
-  KPI Cards row
-========================================================================== -->
 <div class="kpi-grid">
   @for (card of kpiCards; track card.key) {
     <mat-card class="kpi-card" [style.border-left-color]="card.color">
@@ -70,11 +63,8 @@
   }
 </div>
 
-<!-- =========================================================================
-  Charts grid – row 1: Syllabus completion + Understanding donut
-========================================================================== -->
 <div class="chart-row">
-  <!-- Syllabus completion bar -->
+  
   <mat-card class="chart-card chart-wide">
     <mat-card-header>
       <mat-card-title>
@@ -108,7 +98,7 @@
     </mat-card-content>
   </mat-card>
 
-  <!-- Understanding donut -->
+  
   <mat-card class="chart-card chart-narrow">
     <mat-card-header>
       <mat-card-title>
@@ -159,11 +149,8 @@
   </mat-card>
 </div>
 
-<!-- =========================================================================
-  Charts grid – row 2: Faculty + Subject comparison
-========================================================================== -->
 <div class="chart-row">
-  <!-- Faculty comparison -->
+  
   <mat-card class="chart-card">
     <mat-card-header>
       <mat-card-title>
@@ -193,7 +180,7 @@
     </mat-card-content>
   </mat-card>
 
-  <!-- Subject comparison -->
+  
   <mat-card class="chart-card">
     <mat-card-header>
       <mat-card-title>
@@ -223,11 +210,8 @@
   </mat-card>
 </div>
 
-<!-- =========================================================================
-  Charts grid – row 3: Teaching methods + Completion trend
-========================================================================== -->
 <div class="chart-row">
-  <!-- Teaching method effectiveness -->
+  
   <mat-card class="chart-card">
     <mat-card-header>
       <mat-card-title>
@@ -256,7 +240,7 @@
     </mat-card-content>
   </mat-card>
 
-  <!-- Completion trend -->
+  
   <mat-card class="chart-card">
     <mat-card-header>
       <mat-card-title>
@@ -289,9 +273,6 @@
   </mat-card>
 </div>
 
-<!-- =========================================================================
-  Risk scores list
-========================================================================== -->
 <mat-card class="full-card">
   <mat-card-header>
     <mat-card-title>
@@ -337,9 +318,6 @@
   </mat-card-content>
 </mat-card>
 
-<!-- =========================================================================
-  Delayed topics table
-========================================================================== -->
 <mat-card class="full-card">
   <mat-card-header>
     <mat-card-title>

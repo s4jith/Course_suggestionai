@@ -1,14 +1,3 @@
-"""
-FastAPI application entry point.
-
-Responsibilities:
-- Application factory (create_app)
-- Lifespan context manager (DB connect / disconnect)
-- CORS configuration
-- Global exception handlers
-- API router registration
-- Health check endpoint
-"""
 
 import logging
 import logging.config
@@ -33,9 +22,6 @@ from app.routes import topic_progress as topic_progress_router
 from app.routes import ai_recommendations as ai_router
 from app.routes import analytics as analytics_router
 
-# ---------------------------------------------------------------------------
-# Logging configuration
-# ---------------------------------------------------------------------------
 LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -61,46 +47,26 @@ LOGGING_CONFIG = {
 logging.config.dictConfig(LOGGING_CONFIG)
 logger = logging.getLogger(__name__)
 
-
-# ---------------------------------------------------------------------------
-# Lifespan – startup / shutdown hooks
-# ---------------------------------------------------------------------------
-
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """
-    FastAPI lifespan context manager.
-    Code before `yield` runs on startup; code after `yield` runs on shutdown.
-    """
     logger.info("Starting up %s v%s [%s]", settings.APP_NAME, settings.APP_VERSION, settings.ENVIRONMENT)
     await connect_db()
     yield
     logger.info("Shutting down – closing database connection …")
     await close_db()
 
-
-# ---------------------------------------------------------------------------
-# Application factory
-# ---------------------------------------------------------------------------
-
 def create_app() -> FastAPI:
-    """Create and configure the FastAPI application instance."""
 
     app = FastAPI(
         title=settings.APP_NAME,
         version=settings.APP_VERSION,
         description=settings.APP_DESCRIPTION,
-        docs_url="/docs" if settings.DEBUG else None,       # Hide Swagger in production
+        docs_url="/docs" if settings.DEBUG else None,
         redoc_url="/redoc" if settings.DEBUG else None,
         openapi_url="/openapi.json" if settings.DEBUG else None,
         lifespan=lifespan,
     )
 
-    # -----------------------------------------------------------------------
-    # Middleware (order matters – first added = outermost wrapper)
-    # -----------------------------------------------------------------------
-
-    # CORS – allow configured origins
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.ALLOWED_ORIGINS,
@@ -109,16 +75,10 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Request / response access logger
     app.add_middleware(LoggingMiddleware)
-
-    # -----------------------------------------------------------------------
-    # Exception handlers
-    # -----------------------------------------------------------------------
 
     @app.exception_handler(AppException)
     async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
-        """Translate domain exceptions into JSON error envelopes."""
         return JSONResponse(
             status_code=exc.status_code,
             content=error_response(
@@ -129,19 +89,23 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-        """Format Pydantic validation errors into a consistent envelope."""
+        sanitised = []
+        for err in exc.errors():
+            clean = dict(err)
+            if "ctx" in clean:
+                clean["ctx"] = {k: str(v) for k, v in clean["ctx"].items()}
+            sanitised.append(clean)
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content=error_response(
                 error_code="VALIDATION_ERROR",
                 message="Request validation failed.",
-                detail=exc.errors(),
+                detail=sanitised,
             ),
         )
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-        """Catch-all handler so unhandled exceptions never leak stack traces."""
         logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -151,10 +115,6 @@ def create_app() -> FastAPI:
             ),
         )
 
-    # -----------------------------------------------------------------------
-    # Routers
-    # -----------------------------------------------------------------------
-
     app.include_router(auth_router.router, prefix=settings.API_V1_PREFIX)
     app.include_router(users_router.router, prefix=settings.API_V1_PREFIX)
     app.include_router(subjects_router.router, prefix=settings.API_V1_PREFIX)
@@ -163,10 +123,6 @@ def create_app() -> FastAPI:
     app.include_router(ai_router.router, prefix=settings.API_V1_PREFIX)
     app.include_router(analytics_router.router, prefix=settings.API_V1_PREFIX)
 
-    # -----------------------------------------------------------------------
-    # Health check (outside versioned prefix – for load-balancer probes)
-    # -----------------------------------------------------------------------
-
     @app.get(
         "/health",
         tags=["Health"],
@@ -174,10 +130,6 @@ def create_app() -> FastAPI:
         status_code=status.HTTP_200_OK,
     )
     async def health_check():
-        """
-        Returns 200 OK when the application is running.
-        Extended liveness/readiness checks (DB ping) can be added here.
-        """
         return success_response(
             data={
                 "app": settings.APP_NAME,
@@ -189,10 +141,5 @@ def create_app() -> FastAPI:
         )
 
     return app
-
-
-# ---------------------------------------------------------------------------
-# Module-level app instance (used by uvicorn)
-# ---------------------------------------------------------------------------
 
 app = create_app()

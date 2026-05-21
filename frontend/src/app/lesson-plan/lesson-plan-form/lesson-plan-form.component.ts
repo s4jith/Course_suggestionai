@@ -33,7 +33,7 @@ export class LessonPlanFormComponent implements OnInit {
   private readonly router = inject(Router);
 
   readonly academicYears = getAcademicYearOptions();
-  readonly planStatuses = LESSON_PLAN_STATUSES.slice(0, 2); // only draft / active
+  readonly planStatuses = LESSON_PLAN_STATUSES.slice(0, 2);
   readonly semesters = [1, 2, 3, 4, 5, 6, 7, 8];
 
   subjects: Subject[] = [];

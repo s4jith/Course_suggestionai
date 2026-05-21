@@ -58,23 +58,14 @@ export class AnalyticsDashboardComponent implements OnInit, OnDestroy {
   private readonly api = inject(AnalyticsApiService);
   private readonly destroy$ = new Subject<void>();
 
-  // -------------------------------------------------------------------------
-  // Loading state
-  // -------------------------------------------------------------------------
   loading = signal(false);
   error = signal<string | null>(null);
 
-  // -------------------------------------------------------------------------
-  // Filters
-  // -------------------------------------------------------------------------
   filters: AnalyticsFilters = {};
   academicYearInput = '';
   semesterInput: number | null = null;
   semesterOptions = SEMESTER_OPTIONS;
 
-  // -------------------------------------------------------------------------
-  // Raw data
-  // -------------------------------------------------------------------------
   overview: OverviewKPI | null = null;
   syllabusItems: SyllabusCompletionItem[] = [];
   syllabusAvgPct = 0;
@@ -87,16 +78,10 @@ export class AnalyticsDashboardComponent implements OnInit, OnDestroy {
   trendPoints: CompletionTrendPoint[] = [];
   heatmapCells: HeatmapCell[] = [];
 
-  // -------------------------------------------------------------------------
-  // KPI card config
-  // -------------------------------------------------------------------------
   readonly kpiCards = KPI_CARDS;
   readonly riskColors = RISK_COLORS;
   readonly understandingColors = UNDERSTANDING_COLORS;
 
-  // -------------------------------------------------------------------------
-  // Chart: Syllabus completion (bar)
-  // -------------------------------------------------------------------------
   syllabusChart: { series: ApexAxisChartSeries; chart: ApexChart; xaxis: ApexXAxis; yaxis: ApexYAxis; plotOptions: ApexPlotOptions; dataLabels: ApexDataLabels; fill: ApexFill; colors: string[]; tooltip: ApexTooltip } = {
     series: [{ name: 'Completion %', data: [] }],
     chart: { type: 'bar', height: 300, toolbar: CHART_TOOLBAR },
@@ -109,9 +94,6 @@ export class AnalyticsDashboardComponent implements OnInit, OnDestroy {
     tooltip: { y: { formatter: (v: number) => `${v}%` } },
   };
 
-  // -------------------------------------------------------------------------
-  // Chart: Faculty comparison (bar)
-  // -------------------------------------------------------------------------
   facultyChart: { series: ApexAxisChartSeries; chart: ApexChart; xaxis: ApexXAxis; yaxis: ApexYAxis; plotOptions: ApexPlotOptions; dataLabels: ApexDataLabels; colors: string[]; tooltip: ApexTooltip } = {
     series: [{ name: 'Completion %', data: [] }],
     chart: { type: 'bar', height: 300, toolbar: CHART_TOOLBAR },
@@ -123,9 +105,6 @@ export class AnalyticsDashboardComponent implements OnInit, OnDestroy {
     tooltip: { x: { show: true } },
   };
 
-  // -------------------------------------------------------------------------
-  // Chart: Subject completion (horizontal bar)
-  // -------------------------------------------------------------------------
   subjectChart: { series: ApexAxisChartSeries; chart: ApexChart; xaxis: ApexXAxis; yaxis: ApexYAxis; plotOptions: ApexPlotOptions; dataLabels: ApexDataLabels; colors: string[] } = {
     series: [{ name: 'Completion %', data: [] }],
     chart: { type: 'bar', height: 300, toolbar: CHART_TOOLBAR },
@@ -136,9 +115,6 @@ export class AnalyticsDashboardComponent implements OnInit, OnDestroy {
     colors: [CHART_COLORS[2]],
   };
 
-  // -------------------------------------------------------------------------
-  // Chart: Understanding donut
-  // -------------------------------------------------------------------------
   understandingChart: { series: ApexNonAxisChartSeries; chart: ApexChart; labels: string[]; colors: string[]; legend: ApexLegend; dataLabels: ApexDataLabels; plotOptions: ApexPlotOptions; tooltip: ApexTooltip } = {
     series: [0, 0, 0, 0],
     chart: { type: 'donut', height: 280, toolbar: { show: false } },
@@ -153,9 +129,6 @@ export class AnalyticsDashboardComponent implements OnInit, OnDestroy {
     tooltip: { y: { formatter: (v: number) => `${v} topics` } },
   };
 
-  // -------------------------------------------------------------------------
-  // Chart: Teaching method effectiveness (horizontal bar)
-  // -------------------------------------------------------------------------
   teachingChart: { series: ApexAxisChartSeries; chart: ApexChart; xaxis: ApexXAxis; yaxis: ApexYAxis; plotOptions: ApexPlotOptions; dataLabels: ApexDataLabels; colors: string[] } = {
     series: [{ name: 'Effectiveness Score', data: [] }],
     chart: { type: 'bar', height: 320, toolbar: CHART_TOOLBAR },
@@ -166,9 +139,6 @@ export class AnalyticsDashboardComponent implements OnInit, OnDestroy {
     colors: [CHART_COLORS[3]],
   };
 
-  // -------------------------------------------------------------------------
-  // Chart: Completion trend (area/line)
-  // -------------------------------------------------------------------------
   trendChart: { series: ApexAxisChartSeries; chart: ApexChart; xaxis: ApexXAxis; yaxis: ApexYAxis; stroke: ApexStroke; fill: ApexFill; dataLabels: ApexDataLabels; grid: ApexGrid; tooltip: ApexTooltip; colors: string[] } = {
     series: [{ name: 'Cumulative Completed', data: [] }],
     chart: { type: 'area', height: 260, toolbar: CHART_TOOLBAR },
@@ -182,14 +152,8 @@ export class AnalyticsDashboardComponent implements OnInit, OnDestroy {
     colors: [CHART_COLORS[0]],
   };
 
-  // -------------------------------------------------------------------------
-  // Delayed topics table columns
-  // -------------------------------------------------------------------------
   readonly delayedCols = ['topic_title', 'subject_name', 'teacher_name', 'planned_date', 'days_overdue', 'status'];
 
-  // -------------------------------------------------------------------------
-  // Lifecycle
-  // -------------------------------------------------------------------------
   ngOnInit(): void {
     this.loadAll();
   }
@@ -199,9 +163,6 @@ export class AnalyticsDashboardComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  // -------------------------------------------------------------------------
-  // Public API
-  // -------------------------------------------------------------------------
   applyFilters(): void {
     this.filters = {
       ...(this.academicYearInput ? { academic_year: this.academicYearInput } : {}),
@@ -217,9 +178,6 @@ export class AnalyticsDashboardComponent implements OnInit, OnDestroy {
     this.loadAll();
   }
 
-  // -------------------------------------------------------------------------
-  // Internal – load all analytics data in parallel
-  // -------------------------------------------------------------------------
   private loadAll(): void {
     this.loading.set(true);
     this.error.set(null);
@@ -239,10 +197,8 @@ export class AnalyticsDashboardComponent implements OnInit, OnDestroy {
       .subscribe(({ overview, syllabus, faculty, subjects, delayed, risks, methods, understanding, trend }) => {
         this.loading.set(false);
 
-        // Overview KPIs
         this.overview = overview;
 
-        // Syllabus chart
         if (syllabus) {
           this.syllabusItems = syllabus.items.slice(0, 15);
           this.syllabusAvgPct = syllabus.avg_completion_pct;
@@ -253,7 +209,6 @@ export class AnalyticsDashboardComponent implements OnInit, OnDestroy {
           };
         }
 
-        // Faculty chart
         if (faculty) {
           this.facultyItems = faculty.items.slice(0, 10);
           this.facultyChart = {
@@ -263,7 +218,6 @@ export class AnalyticsDashboardComponent implements OnInit, OnDestroy {
           };
         }
 
-        // Subject chart
         if (subjects) {
           this.subjectItems = subjects.items.slice(0, 10);
           this.subjectChart = {
@@ -274,17 +228,14 @@ export class AnalyticsDashboardComponent implements OnInit, OnDestroy {
           this.subjectChart.xaxis.categories = this.subjectItems.map(i => `${i.subject_code || i.subject_name}`);
         }
 
-        // Delayed topics
         if (delayed) {
           this.delayedItems = delayed.items.slice(0, 20);
         }
 
-        // Risk items
         if (risks) {
           this.riskItems = risks.items.slice(0, 10);
         }
 
-        // Teaching method chart
         if (methods) {
           this.teachingItems = methods.items;
           this.teachingChart = {
@@ -294,7 +245,6 @@ export class AnalyticsDashboardComponent implements OnInit, OnDestroy {
           };
         }
 
-        // Understanding donut
         if (understanding) {
           this.understanding = understanding.overall;
           this.understandingChart = {
@@ -308,7 +258,6 @@ export class AnalyticsDashboardComponent implements OnInit, OnDestroy {
           };
         }
 
-        // Trend chart
         if (trend) {
           this.trendPoints = trend.points;
           this.trendChart = {
@@ -324,9 +273,6 @@ export class AnalyticsDashboardComponent implements OnInit, OnDestroy {
     return s.length > max ? s.substring(0, max) + '…' : s;
   }
 
-  // -------------------------------------------------------------------------
-  // Template helpers
-  // -------------------------------------------------------------------------
   getRiskClass(level: string): string {
     const map: Record<string, string> = {
       low: 'risk-badge-low',

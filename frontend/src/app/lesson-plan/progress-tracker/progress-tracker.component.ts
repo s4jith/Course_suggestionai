@@ -40,7 +40,6 @@ export class ProgressTrackerComponent implements OnInit {
 
   readonly displayedColumns = ['topic', 'chapter', 'status', 'completion', 'method', 'date'];
 
-  // ApexCharts config
   chartOptions = {
     series: [0, 0, 0, 0],
     chart: { type: 'donut' as const, height: 280, toolbar: { show: false } },

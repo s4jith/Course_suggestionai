@@ -1,13 +1,3 @@
-"""
-Analytics Service – MongoDB aggregation pipelines for the Analytics Dashboard.
-
-Design decisions:
-- All heavy aggregations run directly in MongoDB via Motor (async).
-- Results are cached in-process using a simple TTL dict cache (no Redis dep).
-- Cache TTL defaults to 5 minutes; individual endpoints may override.
-- Every pipeline targets the canonical collections:
-    lesson_plans, topic_progress, subjects, users
-"""
 
 import asyncio
 import time
@@ -42,13 +32,8 @@ from app.schemas.analytics import (
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Simple in-process TTL cache
-# ---------------------------------------------------------------------------
-
 _CACHE: Dict[str, Tuple[float, Any]] = {}
-DEFAULT_TTL = 300  # 5 minutes
-
+DEFAULT_TTL = 300
 
 def _cache_get(key: str) -> Optional[Any]:
     if key in _CACHE:
@@ -58,19 +43,12 @@ def _cache_get(key: str) -> Optional[Any]:
         del _CACHE[key]
     return None
 
-
 def _cache_set(key: str, value: Any) -> None:
     _CACHE[key] = (time.monotonic(), value)
 
-
 def invalidate_cache() -> None:
-    """Clear all cached analytics results (call after data mutation)."""
     _CACHE.clear()
 
-
-# ---------------------------------------------------------------------------
-# Understanding level → numeric score mapping
-# ---------------------------------------------------------------------------
 _UNDERSTANDING_SCORE = {"excellent": 4, "good": 3, "average": 2, "poor": 1}
 
 _METHOD_LABELS = {
@@ -85,16 +63,7 @@ _METHOD_LABELS = {
     "video_based": "Video Based",
 }
 
-
-# ===========================================================================
-# AnalyticsService
-# ===========================================================================
-
 class AnalyticsService:
-    """
-    All analytics aggregation logic.
-    Inject with `db` from `get_database()` FastAPI dependency.
-    """
 
     def __init__(self, db: AsyncIOMotorDatabase) -> None:
         self.db = db
@@ -103,9 +72,6 @@ class AnalyticsService:
         self.subj_col = db["subjects"]
         self.user_col = db["users"]
 
-    # -----------------------------------------------------------------------
-    # Helper – build a MongoDB $match stage from optional filters
-    # -----------------------------------------------------------------------
     def _tp_match(
         self,
         academic_year: Optional[str] = None,
@@ -147,9 +113,6 @@ class AnalyticsService:
             match["semester"] = semester
         return match
 
-    # -----------------------------------------------------------------------
-    # 1. Overview KPIs
-    # -----------------------------------------------------------------------
     async def get_overview(
         self,
         academic_year: Optional[str] = None,
@@ -161,12 +124,11 @@ class AnalyticsService:
         if cached := _cache_get(cache_key):
             return cached
 
-        # Lesson plan stats
         lp_match = self._lp_match(academic_year, teacher_id, semester=semester)
         lp_pipeline = [
             {"$match": lp_match},
-            {"$unwind": {"path": "$chapters", "preserveNullAndEmpty": True}},
-            {"$unwind": {"path": "$chapters.topics", "preserveNullAndEmpty": True}},
+            {"$unwind": {"path": "$chapters", "preserveNullAndEmptyArrays": True}},
+            {"$unwind": {"path": "$chapters.topics", "preserveNullAndEmptyArrays": True}},
             {
                 "$group": {
                     "_id": None,
@@ -182,7 +144,6 @@ class AnalyticsService:
             },
         ]
 
-        # Topic progress stats
         tp_match = self._tp_match(academic_year, department, teacher_id)
         tp_pipeline = [
             {"$match": tp_match},
@@ -229,14 +190,12 @@ class AnalyticsService:
         hours_planned = float(lp.get("total_hours_planned") or 0)
         hours_delivered = float(tp.get("total_hours_delivered") or 0)
 
-        # Understanding avg (filter None values)
         scores = [s for s in (tp.get("understanding_scores") or []) if s is not None]
         avg_understanding = round(sum(scores) / len(scores), 2) if scores else None
 
         completion_pct = round((completed / total_topics * 100) if total_topics else 0, 1)
         hours_pct = round((hours_delivered / hours_planned * 100) if hours_planned else 0, 1)
 
-        # Count at-risk lesson plans (risk_score >= 60)
         risk_resp = await self.get_risk_scores(academic_year=academic_year, semester=semester)
         at_risk = sum(1 for r in risk_resp.items if r.risk_score >= 60)
         delayed = await self._count_delayed(lp_match)
@@ -279,7 +238,6 @@ class AnalyticsService:
             return 0
         topic_ids_with_planned_dates = res[0].get("total", 0)
 
-        # Cross-check against completed in topic_progress
         pipeline2 = [
             {"$match": lp_match},
             {"$unwind": "$chapters"},
@@ -310,9 +268,6 @@ class AnalyticsService:
         res2 = await self.lp_col.aggregate(pipeline2).to_list(1)
         return res2[0].get("total", 0) if res2 else 0
 
-    # -----------------------------------------------------------------------
-    # 2. Syllabus completion
-    # -----------------------------------------------------------------------
     async def get_syllabus_completion(
         self,
         academic_year: Optional[str] = None,
@@ -327,7 +282,6 @@ class AnalyticsService:
         lp_match = self._lp_match(academic_year, teacher_id, subject_id, semester)
         pipeline = [
             {"$match": lp_match},
-            # Lookup subject name
             {
                 "$lookup": {
                     "from": "subjects",
@@ -339,7 +293,6 @@ class AnalyticsService:
                     "as": "subject_doc",
                 }
             },
-            # Unwind chapters & topics to count
             {"$addFields": {
                 "all_topics": {
                     "$reduce": {
@@ -361,7 +314,6 @@ class AnalyticsService:
                     },
                 }
             },
-            # Lookup progress records for this lesson plan
             {
                 "$lookup": {
                     "from": "topic_progress",
@@ -415,7 +367,7 @@ class AnalyticsService:
             completed = d.get("completed_topics", 0) or 0
             pct = round((completed / total * 100) if total else 0, 1)
             pending = total - completed
-            delayed = 0  # simplified
+            delayed = 0
             risk = _compute_risk_score(pct, pending, total, delayed)
 
             items.append(SyllabusCompletionItem(
@@ -438,9 +390,6 @@ class AnalyticsService:
         _cache_set(cache_key, result)
         return result
 
-    # -----------------------------------------------------------------------
-    # 3. Faculty analytics
-    # -----------------------------------------------------------------------
     async def get_faculty_analytics(
         self,
         academic_year: Optional[str] = None,
@@ -480,7 +429,6 @@ class AnalyticsService:
 
         tp_docs = await self.tp_col.aggregate(pipeline).to_list(None)
 
-        # Fetch user details for each teacher_id
         teacher_ids = [d["_id"] for d in tp_docs if d["_id"]]
         from bson import ObjectId
         user_map: Dict[str, Any] = {}
@@ -523,9 +471,6 @@ class AnalyticsService:
         _cache_set(cache_key, result)
         return result
 
-    # -----------------------------------------------------------------------
-    # 4. Subject analytics
-    # -----------------------------------------------------------------------
     async def get_subject_analytics(
         self,
         academic_year: Optional[str] = None,
@@ -549,8 +494,7 @@ class AnalyticsService:
                     "as": "subject_doc",
                 }
             },
-            {"$unwind": {"path": "$subject_doc", "preserveNullAndEmpty": True}},
-            # Filter by department if specified
+            {"$unwind": {"path": "$subject_doc", "preserveNullAndEmptyArrays": True}},
             *([{"$match": {"subject_doc.department": department}}] if department else []),
             {
                 "$addFields": {
@@ -643,9 +587,6 @@ class AnalyticsService:
         _cache_set(cache_key, result)
         return result
 
-    # -----------------------------------------------------------------------
-    # 5. Delayed topics
-    # -----------------------------------------------------------------------
     async def get_delayed_topics(
         self,
         academic_year: Optional[str] = None,
@@ -759,9 +700,6 @@ class AnalyticsService:
         _cache_set(cache_key, result)
         return result
 
-    # -----------------------------------------------------------------------
-    # 6. Risk scores
-    # -----------------------------------------------------------------------
     async def get_risk_scores(
         self,
         academic_year: Optional[str] = None,
@@ -779,7 +717,7 @@ class AnalyticsService:
         items = []
         for plan in syllabus.items:
             pending = plan.total_topics - plan.completed_topics
-            delayed = 0  # simplified; full delayed count from pipeline is expensive
+            delayed = 0
             risk = plan.risk_score
             risk_level = _risk_level(risk)
             rec = _risk_recommendation(risk_level, pending, plan.completion_pct)
@@ -788,7 +726,7 @@ class AnalyticsService:
                 lesson_plan_id=plan.lesson_plan_id,
                 title=plan.title,
                 subject_name=plan.subject_name,
-                teacher_name="",  # enriched lazily
+                teacher_name="",
                 risk_score=risk,
                 risk_level=risk_level,
                 completion_pct=plan.completion_pct,
@@ -804,9 +742,6 @@ class AnalyticsService:
         _cache_set(cache_key, result)
         return result
 
-    # -----------------------------------------------------------------------
-    # 7. Teaching method effectiveness
-    # -----------------------------------------------------------------------
     async def get_teaching_method_effectiveness(
         self,
         academic_year: Optional[str] = None,
@@ -855,7 +790,6 @@ class AnalyticsService:
             scores = [s for s in (d.get("understanding_scores") or []) if s is not None]
             avg_und = round(sum(scores) / len(scores), 2) if scores else 0.0
             avg_comp = round(float(d.get("avg_completion") or 0), 1)
-            # Composite effectiveness: 0.6 * understanding_pct + 0.4 * completion_pct
             effectiveness = round(0.6 * (avg_und / 4 * 100) + 0.4 * avg_comp, 1)
             items.append(TeachingMethodItem(
                 method=d["_id"],
@@ -876,9 +810,6 @@ class AnalyticsService:
         _cache_set(cache_key, result)
         return result
 
-    # -----------------------------------------------------------------------
-    # 8. Student understanding analytics
-    # -----------------------------------------------------------------------
     async def get_understanding_analytics(
         self,
         academic_year: Optional[str] = None,
@@ -892,7 +823,6 @@ class AnalyticsService:
         if teacher_id:
             match["teacher_id"] = teacher_id
 
-        # Overall pipeline
         overall_pipeline = [
             {"$match": match},
             {
@@ -903,7 +833,6 @@ class AnalyticsService:
             },
         ]
 
-        # By subject pipeline
         by_subject_pipeline = [
             {"$match": match},
             {
@@ -936,7 +865,6 @@ class AnalyticsService:
             self.tp_col.aggregate(by_subject_pipeline).to_list(None),
         )
 
-        # Build overall breakdown
         counts: Dict[str, int] = {d["_id"]: d["count"] for d in overall_docs if d["_id"]}
         total = sum(counts.values())
         overall = _build_breakdown(
@@ -946,7 +874,6 @@ class AnalyticsService:
             counts.get("poor", 0),
         )
 
-        # Build by-subject
         by_subject = []
         for d in by_subject_docs:
             bd = _build_breakdown(
@@ -964,9 +891,6 @@ class AnalyticsService:
         _cache_set(cache_key, result)
         return result
 
-    # -----------------------------------------------------------------------
-    # 9. Completion trend (time-series line chart)
-    # -----------------------------------------------------------------------
     async def get_completion_trend(
         self,
         days: int = 30,
@@ -1016,9 +940,6 @@ class AnalyticsService:
         _cache_set(cache_key, result)
         return result
 
-    # -----------------------------------------------------------------------
-    # 10. Heatmap data
-    # -----------------------------------------------------------------------
     async def get_heatmap(
         self,
         days: int = 90,
@@ -1069,21 +990,12 @@ class AnalyticsService:
         _cache_set(cache_key, result)
         return result
 
-
-# ===========================================================================
-# Pure-function helpers
-# ===========================================================================
-
 def _compute_risk_score(
     completion_pct: float,
     pending_count: int,
     total_count: int,
     delayed_count: int,
 ) -> float:
-    """
-    Risk score 0-100 (higher = more risk).
-    Formula: 0.5 * incompletion_ratio + 0.3 * pending_ratio + 0.2 * delayed_ratio
-    """
     if total_count == 0:
         return 0.0
     incompletion = 1 - (completion_pct / 100)
@@ -1091,7 +1003,6 @@ def _compute_risk_score(
     delayed_ratio = min(1.0, delayed_count / total_count) if total_count else 0
     raw = 0.5 * incompletion + 0.3 * pending_ratio + 0.2 * delayed_ratio
     return round(raw * 100, 1)
-
 
 def _risk_level(score: float) -> str:
     if score < 25:
@@ -1102,7 +1013,6 @@ def _risk_level(score: float) -> str:
         return "high"
     return "critical"
 
-
 def _risk_recommendation(risk_level: str, pending: int, completion_pct: float) -> str:
     if risk_level == "critical":
         return f"Immediate action required. {pending} topics pending with {completion_pct:.0f}% completion."
@@ -1111,7 +1021,6 @@ def _risk_recommendation(risk_level: str, pending: int, completion_pct: float) -
     elif risk_level == "medium":
         return f"On watch – {pending} topics pending. Maintain consistent progress."
     return "On track. Continue at current pace."
-
 
 def _build_breakdown(excellent: int, good: int, average: int, poor: int) -> UnderstandingBreakdown:
     total = excellent + good + average + poor

@@ -1,21 +1,3 @@
-"""
-Analytics routes – all aggregated analytics endpoints.
-
-All routes live under the /api/v1/analytics prefix (configured in main.py).
-
-Endpoints:
-  GET /analytics/overview               – Overall KPI summary
-  GET /analytics/syllabus-completion    – Per lesson-plan completion %
-  GET /analytics/faculty                – Faculty-wise progress
-  GET /analytics/subjects               – Subject-wise progress
-  GET /analytics/delayed-topics         – Overdue / delayed topics
-  GET /analytics/risk-scores            – Per-plan risk assessment
-  GET /analytics/teaching-methods       – Teaching method effectiveness
-  GET /analytics/understanding          – Student understanding breakdown
-  GET /analytics/completion-trend       – Time-series completion line chart
-  GET /analytics/heatmap                – Calendar heatmap data
-  POST /analytics/invalidate-cache      – Clear server-side cache (admin)
-"""
 
 from typing import Annotated, Optional
 
@@ -42,18 +24,8 @@ from app.services.analytics_service import AnalyticsService, invalidate_cache
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
-
-# ---------------------------------------------------------------------------
-# Dependency
-# ---------------------------------------------------------------------------
-
 def get_service(db: Annotated[AsyncIOMotorDatabase, Depends(get_database)]) -> AnalyticsService:
     return AnalyticsService(db)
-
-
-# ===========================================================================
-# 1. Overview KPIs
-# ===========================================================================
 
 @router.get(
     "/overview",
@@ -77,11 +49,6 @@ async def get_overview(
     )
     return success_response(data)
 
-
-# ===========================================================================
-# 2. Syllabus completion
-# ===========================================================================
-
 @router.get(
     "/syllabus-completion",
     response_model=SuccessResponse[SyllabusCompletionResponse],
@@ -104,11 +71,6 @@ async def get_syllabus_completion(
     )
     return success_response(data)
 
-
-# ===========================================================================
-# 3. Faculty analytics
-# ===========================================================================
-
 @router.get(
     "/faculty",
     response_model=SuccessResponse[FacultyAnalyticsResponse],
@@ -126,11 +88,6 @@ async def get_faculty_analytics(
         department=department,
     )
     return success_response(data)
-
-
-# ===========================================================================
-# 4. Subject analytics
-# ===========================================================================
 
 @router.get(
     "/subjects",
@@ -152,11 +109,6 @@ async def get_subject_analytics(
     )
     return success_response(data)
 
-
-# ===========================================================================
-# 5. Delayed topics
-# ===========================================================================
-
 @router.get(
     "/delayed-topics",
     response_model=SuccessResponse[DelayedTopicsResponse],
@@ -174,11 +126,6 @@ async def get_delayed_topics(
         teacher_id=teacher_id,
     )
     return success_response(data)
-
-
-# ===========================================================================
-# 6. Risk scores
-# ===========================================================================
 
 @router.get(
     "/risk-scores",
@@ -200,11 +147,6 @@ async def get_risk_scores(
     )
     return success_response(data)
 
-
-# ===========================================================================
-# 7. Teaching method effectiveness
-# ===========================================================================
-
 @router.get(
     "/teaching-methods",
     response_model=SuccessResponse[TeachingMethodResponse],
@@ -222,11 +164,6 @@ async def get_teaching_method_effectiveness(
         teacher_id=teacher_id,
     )
     return success_response(data)
-
-
-# ===========================================================================
-# 8. Student understanding analytics
-# ===========================================================================
 
 @router.get(
     "/understanding",
@@ -246,11 +183,6 @@ async def get_understanding_analytics(
     )
     return success_response(data)
 
-
-# ===========================================================================
-# 9. Completion trend
-# ===========================================================================
-
 @router.get(
     "/completion-trend",
     response_model=SuccessResponse[CompletionTrendResponse],
@@ -266,11 +198,6 @@ async def get_completion_trend(
     data = await service.get_completion_trend(days=days, teacher_id=teacher_id)
     return success_response(data)
 
-
-# ===========================================================================
-# 10. Heatmap
-# ===========================================================================
-
 @router.get(
     "/heatmap",
     response_model=SuccessResponse[HeatmapResponse],
@@ -285,11 +212,6 @@ async def get_heatmap(
 ):
     data = await service.get_heatmap(days=days, teacher_id=teacher_id)
     return success_response(data)
-
-
-# ===========================================================================
-# Cache invalidation (admin only)
-# ===========================================================================
 
 @router.post(
     "/invalidate-cache",

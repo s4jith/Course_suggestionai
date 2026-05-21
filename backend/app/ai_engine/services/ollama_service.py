@@ -1,17 +1,3 @@
-"""
-Ollama Service – async HTTP client for the local Ollama LLM server.
-
-Responsibilities:
-  - POST /api/generate  : send a prompt and receive a completion
-  - GET  /api/tags      : health check + available model listing
-  - JSON extraction     : parse structured JSON from raw model output
-  - Timeout handling    : configurable per-request timeout
-  - Fallback safety     : all errors return None so callers can degrade gracefully
-
-Requires: httpx (async HTTP client)
-
-Ollama API docs: https://github.com/ollama/ollama/blob/main/docs/api.md
-"""
 
 import json
 import logging
@@ -23,38 +9,14 @@ from app.config.settings import settings
 
 logger = logging.getLogger(__name__)
 
-
 class OllamaService:
-    """
-    Thin async wrapper around the Ollama REST API.
-
-    The service is intentionally silent on errors — it logs warnings and
-    returns None so that the RecommendationService can fall back to
-    rule-only output without propagating exceptions to the API layer.
-    """
 
     def __init__(self) -> None:
         self._base_url = settings.OLLAMA_BASE_URL.rstrip("/")
         self._model = settings.OLLAMA_MODEL
         self._timeout = float(settings.OLLAMA_TIMEOUT)
 
-    # ------------------------------------------------------------------
-    # Public interface
-    # ------------------------------------------------------------------
-
     async def generate(self, prompt: str) -> Optional[Dict[str, Any]]:
-        """
-        Send a prompt to Ollama and return the parsed JSON response dict.
-
-        The prompt is expected to instruct the model to respond with pure JSON.
-        This method extracts and parses that JSON automatically.
-
-        Args:
-            prompt: Fully formatted prompt string from a templates.py builder.
-
-        Returns:
-            Parsed dict on success, None on any error (connection, timeout, parse).
-        """
         if not settings.OLLAMA_ENABLED:
             logger.debug("Ollama disabled in settings — skipping LLM call.")
             return None
@@ -64,8 +26,8 @@ class OllamaService:
             "prompt": prompt,
             "stream": False,
             "options": {
-                "temperature": 0.15,   # low temperature → deterministic structured output
-                "num_predict": 1024,   # max output tokens
+                "temperature": 0.15,
+                "num_predict": 1024,
                 "top_p": 0.9,
             },
         }
@@ -105,23 +67,12 @@ class OllamaService:
                 exc.response.status_code,
                 exc.response.text[:300],
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.error("OllamaService: unexpected error: %s", exc, exc_info=True)
 
         return None
 
     async def health_check(self) -> Dict[str, Any]:
-        """
-        Check Ollama server reachability and model availability.
-
-        Returns a dict with:
-            available      : bool — is the Ollama server reachable?
-            model_loaded   : bool — is the configured model available?
-            model          : str  — configured model name
-            base_url       : str  — configured Ollama base URL
-            available_models: list — all models found on the server
-            error          : str | None — human-readable error if any
-        """
         if not settings.OLLAMA_ENABLED:
             return {
                 "available": False,
@@ -164,7 +115,7 @@ class OllamaService:
                     "Ensure the Ollama server is running (`ollama serve`)."
                 ),
             }
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             return {
                 "available": False,
                 "model_loaded": False,
@@ -175,39 +126,24 @@ class OllamaService:
             }
 
     async def list_models(self) -> List[str]:
-        """Return a list of model names available on the Ollama server."""
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.get(f"{self._base_url}/api/tags")
                 resp.raise_for_status()
                 return [m.get("name", "") for m in resp.json().get("models", [])]
-        except Exception:  # noqa: BLE001
+        except Exception:
             return []
-
-    # ------------------------------------------------------------------
-    # Private helpers
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _extract_json(text: str) -> Optional[Dict[str, Any]]:
-        """
-        Extract a JSON object from raw model output.
-
-        Handles three common Ollama response patterns:
-          1. Pure JSON string (ideal case)
-          2. JSON wrapped in markdown code fences (```json ... ```)
-          3. JSON embedded somewhere inside a longer prose response
-        """
         if not text:
             return None
 
-        # Attempt 1: direct parse
         try:
             return json.loads(text.strip())
         except (json.JSONDecodeError, ValueError):
             pass
 
-        # Attempt 2: strip markdown code fences
         cleaned = text.strip()
         for fence in ("```json\n", "```json", "```\n", "```"):
             if cleaned.startswith(fence):
@@ -221,7 +157,6 @@ class OllamaService:
         except (json.JSONDecodeError, ValueError):
             pass
 
-        # Attempt 3: find first '{' … last '}' substring
         start = text.find("{")
         end = text.rfind("}")
         if start != -1 and end > start:
@@ -231,10 +166,5 @@ class OllamaService:
                 pass
 
         return None
-
-
-# ---------------------------------------------------------------------------
-# Module-level singleton — imported by RecommendationService
-# ---------------------------------------------------------------------------
 
 ollama_service = OllamaService()
